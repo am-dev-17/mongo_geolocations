@@ -261,3 +261,407 @@ db.c1.aggregate([
 ])
 
 // $addFields
+$addFields //This will project all fields and then add the fields that you specify
+
+db.scores.insertMany([
+    {
+        _id: 1,
+        student: "Maya",
+        homework: [ 10, 5, 10 ],
+        quiz: [ 10, 8 ],
+        extraCredit: 0
+      },
+      {
+        _id: 2,
+        student: "Ryan",
+        homework: [ 5, 6, 5 ],
+        quiz: [ 8, 8 ],
+        extraCredit: 8
+      }
+])
+
+db.scores.aggregate([
+    {
+        $addFields: {
+            totalHomework: {$sum: '$homework'},
+            totalQuiz: {$sum: "$quiz"}
+        }
+    },
+    {
+        $addFields: {
+            totalScore: {
+                $add: ["$totalHomework", "$totalQuiz", "$extraCredit"]
+            }
+        }
+    }
+])
+
+// Add fields to an embedded document
+db.vehicles.insertMany([
+    { _id: 1, type: "car", specs: { doors: 4, wheels: 4 } },
+{ _id: 2, type: "motorcycle", specs: { doors: 0, wheels: 2 } },
+{ _id: 3, type: "jet ski" }
+])
+
+db.vehicles.aggregate([
+    {
+        $addFields: {
+            "specs.fuel_type": "unleaded"
+        }
+    }
+])
+
+// Overwriting an existing field
+db.animals.insertMany([
+    { _id: 1, dogs: 10, cats: 15 }
+])
+
+db.animals.aggregate([
+    {
+        $addFields: {
+            cats: 20
+        }
+    }
+])
+
+db.fruit.insertMany([
+    { "_id" : 1, "item" : "tangerine", "type" : "citrus" },
+{ "_id" : 2, "item" : "lemon", "type" : "citrus" },
+{ "_id" : 3, "item" : "grapefruit", "type" : "citrus" }
+])
+
+// replacing the _id field with the value of item
+db.fruit.aggregate([
+    {
+        $addFields: {
+            _id: "$item",
+            item: "fruit"
+        }
+    }
+])
+
+// Add element to an array
+db.scores.insertMany([
+    { _id: 1, student: "Maya", homework: [ 10, 5, 10 ], quiz: [ 10, 8 ], extraCredit: 0 },
+    { _id: 2, student: "Ryan", homework: [ 5, 6, 5 ], quiz: [ 8, 8 ], extraCredit: 8 }
+ ])
+
+
+db.scores.aggregate([
+    {$match: {_id: 1}},
+    {$addFields: {
+        homework: {
+            $concatArrays: ["$homework", [7]]
+        }
+    }}
+])
+
+// $text performs a text search on the content of the fields indexed with a text index. 
+// A $text expression has the following syntax:
+
+db.articles.createIndex( { subject: "text" } )
+
+db.articles.insertMany( [
+    { _id: 1, subject: "coffee", author: "xyz", views: 50 },
+    { _id: 2, subject: "Coffee Shopping", author: "efg", views: 5 },
+    { _id: 3, subject: "Baking a cake", author: "abc", views: 90  },
+    { _id: 4, subject: "baking", author: "xyz", views: 100 },
+    { _id: 5, subject: "Café Con Leche", author: "abc", views: 200 },
+    { _id: 6, subject: "Сырники", author: "jkl", views: 80 },
+    { _id: 7, subject: "coffee and cream", author: "efg", views: 10 },
+    { _id: 8, subject: "Cafe con Leche", author: "xyz", views: 10 }
+] )
+
+db.articles.find(
+    {$text: {
+        $search: "coffee"
+    }}
+)
+
+// Matching any of the search terms Logical OR is done with spaces
+db.articles.find(
+    {
+        $text: {
+            $search: "bake coffee cake"
+        }
+    }
+)
+
+db.articles.find(
+    { $text: { $search: "cake" } },
+    { score2: { $meta: "textScore" } }
+ )
+
+// $sort aggregation
+db.restaurants.insertMany( [
+    { "_id" : 1, "name" : "Central Park Cafe", "borough" : "Manhattan"},
+    { "_id" : 2, "name" : "Rock A Feller Bar and Grill", "borough" : "Queens"},
+    { "_id" : 3, "name" : "Empire State Pub", "borough" : "Brooklyn"},
+    { "_id" : 4, "name" : "Stan's Pizzaria", "borough" : "Manhattan"},
+    { "_id" : 5, "name" : "Jane's Deli", "borough" : "Brooklyn"},
+ ] );
+
+ db.restaurants.aggregate([
+     {$sort: {borough: 1}}
+ ])
+
+ db.restaurants.aggregate([
+     {
+         $sort: {
+             borough: 1, _id: 1
+         }
+     }
+ ])
+
+ db.users.aggregate(
+    [
+      { $sort : { age : -1, posts: 1 } }
+    ]
+ )
+
+//  Text Score Metadata Sort
+db.users.createIndex({'somefield': "text"})
+db.users.aggregate(
+    [
+        {
+            $match: {$text:{$search: "operating"}}
+        },
+        {
+            $sort:{
+                score: { 
+                    $meta: "textScore"
+                },
+                posts: -1
+            }
+        }
+    ]
+)
+
+// $sort + $limit operator and memory optimization
+// If a $sort preceds a $limit and there are no intervening
+// states that modify the number of documents, the 
+// $limit will be used with the $sort and only the limit n
+// number of documents will be stored
+
+// The $sort operator can take advantage of an index if 
+// it's used in the first stage of a pipeline or 
+// if it's only preceeded by a $match stage.
+
+// $limit aggregation stage
+db.article.aggregate([
+    { $limit : 5 }
+ ]);
+
+//  $skip 
+// Skips over the specified number of documents that pass into the stage and passes 
+// the remaining documents to the next stage in the pipeline.
+db.article.aggregate([
+    {$skip: 5}
+])
+
+// $redact
+db.forecasts.insertMany([
+    {
+        _id: 1,
+        title: "123 Department Report",
+        tags: [ "G", "STLW" ],
+        year: 2014,
+        subsections: [
+          {
+            subtitle: "Section 1: Overview",
+            tags: [ "SI", "G" ],
+            content:  "Section 1: This is the content of section 1."
+          },
+          {
+            subtitle: "Section 2: Analysis",
+            tags: [ "STLW" ],
+            content: "Section 2: This is the content of section 2."
+          },
+          {
+            subtitle: "Section 3: Budgeting",
+            tags: [ "TK" ],
+            content: {
+              text: "Section 3: This is the content of section3.",
+              tags: [ "HCS" ]
+            }
+          }
+        ]
+      }
+])
+
+var userAccess = [ "STLW", "G" ];
+db.forecasts.aggregate(
+   [
+     { $match: { year: 2014 } },
+     { $redact: {
+        $cond: {
+           if: { $gt: [ { $size: { $setIntersection: [ "$tags", userAccess ] } }, 0 ] },
+           then: "$$DESCEND",
+           else: "$$PRUNE"
+         }
+       }
+     }
+   ]
+);
+// $$DESCEND - Will list the current level document not embedded
+// $KEEP - Will the current level and embdedded
+// $$PRUNE - EXCLUDES all fields and all lower fields
+
+
+// Exclude all fields at a given level
+db.accounts.insertOne(
+    {
+        _id: 1,
+        level: 1,
+        acct_id: "xyz123",
+        cc: {
+          level: 5,
+          type: "yy",
+          num: 000000000000,
+          exp_date: ISODate("2015-11-01T00:00:00.000Z"),
+          billing_addr: {
+            level: 5,
+            addr1: "123 ABC Street",
+            city: "Some City"
+          },
+          shipping_addr: [
+            {
+              level: 3,
+              addr1: "987 XYZ Ave",
+              city: "Some City"
+            },
+            {
+              level: 3,
+              addr1: "PO Box 0123",
+              city: "Some City"
+            }
+          ]
+        },
+        status: "A"
+      }
+)
+
+
+db.accounts.aggregate([
+    {
+        $match: {
+            status: "A"
+        }
+    },
+    {
+        $redact: {
+            $cond: {
+                if: {$eq: ["$level", 5]},
+                then: "$$PRUNE",
+                else: "$$DESCEND"
+            }
+        }
+    }
+])
+
+// $group
+db.sales.insertMany([
+    { "_id" : 1, "item" : "abc", "price" : NumberDecimal("10"), "quantity" : NumberInt("2"), "date" : ISODate("2014-03-01T08:00:00Z") },
+    { "_id" : 2, "item" : "jkl", "price" : NumberDecimal("20"), "quantity" : NumberInt("1"), "date" : ISODate("2014-03-01T09:00:00Z") },
+    { "_id" : 3, "item" : "xyz", "price" : NumberDecimal("5"), "quantity" : NumberInt( "10"), "date" : ISODate("2014-03-15T09:00:00Z") },
+    { "_id" : 4, "item" : "xyz", "price" : NumberDecimal("5"), "quantity" :  NumberInt("20") , "date" : ISODate("2014-04-04T11:21:39.736Z") },
+    { "_id" : 5, "item" : "abc", "price" : NumberDecimal("10"), "quantity" : NumberInt("10") , "date" : ISODate("2014-04-04T21:23:13.331Z") },
+    { "_id" : 6, "item" : "def", "price" : NumberDecimal("7.5"), "quantity": NumberInt("5" ) , "date" : ISODate("2015-06-04T05:08:13Z") },
+    { "_id" : 7, "item" : "def", "price" : NumberDecimal("7.5"), "quantity": NumberInt("10") , "date" : ISODate("2015-09-10T08:43:00Z") },
+    { "_id" : 8, "item" : "abc", "price" : NumberDecimal("10"), "quantity" : NumberInt("5" ) , "date" : ISODate("2016-02-06T20:20:13Z") },
+  ])
+
+  db.sales.aggregate( [
+    {
+      $group: {
+         _id: null,
+         count: { $count: { } }
+      }
+    }
+  ] )
+
+//   retrieve distinct values
+db.sales.aggregate( [ { $group : { _id : "$item" } } ] )
+
+db.sales.aggregate(
+    [
+        {
+            $group: {
+                _id: "$item",
+                totalSaleAmount: {
+                    $sum: {
+                        $multiply: ["$price", "$quantity"]
+                    }
+                }
+            }
+        },
+        {
+            $match: { totalSaleAmount: {$gte: 100}}
+        }
+    ]
+)
+
+// Calculate Count, Sum, and Average
+db.sales.insertMany([
+    { "_id" : 1, "item" : "abc", "price" : NumberDecimal("10"), "quantity" : NumberInt("2"), "date" : ISODate("2014-03-01T08:00:00Z") },
+    { "_id" : 2, "item" : "jkl", "price" : NumberDecimal("20"), "quantity" : NumberInt("1"), "date" : ISODate("2014-03-01T09:00:00Z") },
+    { "_id" : 3, "item" : "xyz", "price" : NumberDecimal("5"), "quantity" : NumberInt( "10"), "date" : ISODate("2014-03-15T09:00:00Z") },
+    { "_id" : 4, "item" : "xyz", "price" : NumberDecimal("5"), "quantity" :  NumberInt("20") , "date" : ISODate("2014-04-04T11:21:39.736Z") },
+    { "_id" : 5, "item" : "abc", "price" : NumberDecimal("10"), "quantity" : NumberInt("10") , "date" : ISODate("2014-04-04T21:23:13.331Z") },
+    { "_id" : 6, "item" : "def", "price" : NumberDecimal("7.5"), "quantity": NumberInt("5" ) , "date" : ISODate("2015-06-04T05:08:13Z") },
+    { "_id" : 7, "item" : "def", "price" : NumberDecimal("7.5"), "quantity": NumberInt("10") , "date" : ISODate("2015-09-10T08:43:00Z") },
+    { "_id" : 8, "item" : "abc", "price" : NumberDecimal("10"), "quantity" : NumberInt("5" ) , "date" : ISODate("2016-02-06T20:20:13Z") },
+  ])
+
+//   Grouping by the day of the year
+db.sales.aggregate([
+    {
+        $match: {
+            "date": {
+                $gte: new ISODate("2014-01-01"),
+                $lt: new ISODate("2015-01-01")
+            }
+        }
+    },
+    {
+        $group : {
+            _id: { $dateToString: {format: "%Y-%m-%d", date: "$date"}},
+            totalSaleAmount: {$sum: {$multiply: ["$price", "$quantity"]}},
+            averageQuantity: {$avg: "$quantity"},
+            count: {$sum: 1}
+        }
+    },
+    {
+        $sort: {
+            totalSaleAmount: -1
+        }
+    }
+])
+
+// Group By null
+db.sales.aggregate([
+    {
+      $group : {
+         _id : null,
+         totalSaleAmount: { $sum: { $multiply: [ "$price", "$quantity" ] } },
+         averageQuantity: { $avg: "$quantity" },
+         count: { $sum: 1 }
+      }
+    }
+   ])
+
+
+// Pivot Data
+db.books.insertMany([
+    { "_id" : 8751, "title" : "The Banquet", "author" : "Dante", "copies" : 2 },
+    { "_id" : 8752, "title" : "Divine Comedy", "author" : "Dante", "copies" : 1 },
+    { "_id" : 8645, "title" : "Eclogues", "author" : "Dante", "copies" : 2 },
+    { "_id" : 7000, "title" : "The Odyssey", "author" : "Homer", "copies" : 10 },
+    { "_id" : 7020, "title" : "Iliad", "author" : "Homer", "copies" : 10 }
+  ])
+
+  db.books.aggregate([
+    { $group : { _id : "$author", books: { $push: "$title" } } }
+  ])
+
+  
