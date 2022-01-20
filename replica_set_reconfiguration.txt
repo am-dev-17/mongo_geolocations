@@ -1,0 +1,65 @@
+Add and remove replica set members
+Reconfigure a replica set 
+
+rs.add()
+-- This is going to allow you to add a replica set member 
+-- host -> The new member to be added to the replica set 
+ {
+   _id: <int>,
+   host: <string>,        // required
+   arbiterOnly: <boolean>,
+   buildIndexes: <boolean>,
+   hidden: <boolean>,
+   priority: <number>,
+   tags: <document>,
+   secondaryDelaySecs: <int>,
+   votes: <number>
+}
+the arbiterOnly parameter is just a boolean 
+
+rs.add(
+    {host: "mongodb4.example.net:27017"}
+)
+
+rs.add( "mongodbd4.example.net:27017" )
+
+rs.add( { host: "mongodbd4.example.net:27017", priority: 0 } )
+
+rs.add( { host: "mongodb3.example.net:27017", arbiterOnly: true } )
+
+
+Removing a replica set member from the replica set 
+rs.remove(
+"ip"
+)
+
+rs.reconfig() is used to reconfigure a replica set 
+rs.reconfig(
+  <configuration>,
+  {
+    "force" : <boolean>,
+    "maxTimeMS" : <int>
+  }
+)
+
+cfg = rs.conf();
+cfg.members[1].priority = 2;
+rs.reconfig(cfg);
+
+Reconfigure a replica set using unavailable members 
+
+Oplog
+Understanding the nature of mongodbs statement based replication
+Understanding why the oplog must be idempotent
+Knowing what operations are stored in the oplog 
+Knowing that the oplog stores the _id of the document for writes
+one oplog entry per document affected
+
+statement based replication vs binary replication 
+binary replication cannot run on multiple different mongodb versions
+mongodb will replay the statement based replication 
+Remember that mongoDB is going to use statement based replication BUT per document in the oplog 
+
+
+Replica Set Oplog 
+

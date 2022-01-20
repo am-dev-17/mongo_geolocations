@@ -1,0 +1,157 @@
+{
+   "set" : "replset",
+   "date" : ISODate("2020-03-05T05:24:45.567Z"),
+   "myState" : 1,
+   "term" : NumberLong(3),
+   "syncSourceHost" : "",
+   "syncSourceId" : -1,
+   "heartbeatIntervalMillis" : NumberLong(2000),
+   "majorityVoteCount" : 2,
+   "writeMajorityCount" : 2,
+   "votingMembersCount" : 3,            // Available starting in v4.4
+   "writableVotingMembersCount" : 3,    // Available starting in v4.4
+   "optimes" : {
+      "lastCommittedOpTime" : {
+         "ts" : Timestamp(1583385878, 1),
+         "t" : NumberLong(3)
+      },
+      "lastCommittedWallTime" : ISODate("2020-03-05T05:24:38.122Z"),
+      "readConcernMajorityOpTime" : {
+         "ts" : Timestamp(1583385878, 1),
+         "t" : NumberLong(3)
+      },
+      "readConcernMajorityWallTime" : ISODate("2020-03-05T05:24:38.122Z"),
+      "appliedOpTime" : {
+         "ts" : Timestamp(1583385878, 1),
+         "t" : NumberLong(3)
+      },
+      "durableOpTime" : {
+         "ts" : Timestamp(1583385878, 1),
+         "t" : NumberLong(3)
+      },
+      "lastAppliedWallTime" : ISODate("2020-03-05T05:24:38.122Z"),
+      "lastDurableWallTime" : ISODate("2020-03-05T05:24:38.122Z")
+   },
+   "lastStableRecoveryTimestamp" : Timestamp(1583385868, 2),
+   "electionCandidateMetrics" : {
+      "lastElectionReason" : "stepUpRequestSkipDryRun",
+      "lastElectionDate" : ISODate("2020-03-05T05:24:28.061Z"),
+      "electionTerm" : NumberLong(3),
+      "lastCommittedOpTimeAtElection" : {
+         "ts" : Timestamp(1583385864, 1),
+         "t" : NumberLong(2)
+      },
+      "lastSeenOpTimeAtElection" : {
+         "ts" : Timestamp(1583385864, 1),
+         "t" : NumberLong(2)
+      },
+      "numVotesNeeded" : 2,
+      "priorityAtElection" : 1,
+      "electionTimeoutMillis" : NumberLong(10000),
+      "priorPrimaryMemberId" : 1,
+      "numCatchUpOps" : NumberLong(0),
+      "newTermStartDate" : ISODate("2020-03-05T05:24:28.118Z"),
+      "wMajorityWriteAvailabilityDate" : ISODate("2020-03-05T05:24:28.228Z")
+   },
+   "electionParticipantMetrics" : {
+      "votedForCandidate" : true,
+      "electionTerm" : NumberLong(2),
+      "lastVoteDate" : ISODate("2020-03-05T05:22:33.306Z"),
+      "electionCandidateMemberId" : 1,
+      "voteReason" : "",
+      "lastAppliedOpTimeAtElection" : {
+         "ts" : Timestamp(1583385748, 1),
+         "t" : NumberLong(1)
+      },
+      "maxAppliedOpTimeInSet" : {
+         "ts" : Timestamp(1583385748, 1),
+         "t" : NumberLong(1)
+      },
+      "priorityAtElection" : 1
+   },
+   "members" : [
+      {
+         "_id" : 0,
+         "name" : "m1.example.net:27017",
+         "health" : 1,
+         "state" : 1,
+         "stateStr" : "PRIMARY",
+         "uptime" : 269,
+         "optime" : {
+            "ts" : Timestamp(1583385878, 1),
+            "t" : NumberLong(3)
+         },
+         "optimeDate" : ISODate("2020-03-05T05:24:38Z"),
+         "syncSourceHost" : "",
+         "syncSourceId" : -1,
+         "infoMessage" : "",
+         "electionTime" : Timestamp(1583385868, 1),
+         "electionDate" : ISODate("2020-03-05T05:24:28Z"),
+         "configVersion" : 1,
+         "configTerm" : 0,
+         "self" : true,
+         "lastHeartbeatMessage" : ""
+      },
+      {
+         "_id" : 1,
+         "name" : "m2.example.net:27017",
+         "health" : 1,
+         "state" : 2,
+         "stateStr" : "SECONDARY",
+         "uptime" : 266,
+         "optime" : {
+            "ts" : Timestamp(1583385878, 1),
+            "t" : NumberLong(3)
+         },
+         "optimeDurable" : {
+            "ts" : Timestamp(1583385878, 1),
+            "t" : NumberLong(3)
+         },
+         "optimeDate" : ISODate("2020-03-05T05:24:38Z"),
+         "optimeDurableDate" : ISODate("2020-03-05T05:24:38Z"),
+         "lastHeartbeat" : ISODate("2020-03-05T05:24:44.114Z"),
+         "lastHeartbeatRecv" : ISODate("2020-03-05T05:24:43.999Z"),
+         "pingMs" : NumberLong(0),
+         "lastHeartbeatMessage" : "",
+         "syncSourceHost" : "m3.example.net:27017",
+         "syncSourceId" : 2,
+         "infoMessage" : "",
+         "configVersion" : 1
+      },
+      {
+         "_id" : 2,
+         "name" : "m3.example.net:27017",
+         "health" : 1,
+         "state" : 2,
+         "stateStr" : "SECONDARY",
+         "uptime" : 266,
+         "optime" : {
+            "ts" : Timestamp(1583385878, 1),
+            "t" : NumberLong(3)
+         },
+         "optimeDurable" : {
+            "ts" : Timestamp(1583385878, 1),
+            "t" : NumberLong(3)
+         },
+         "optimeDate" : ISODate("2020-03-05T05:24:38Z"),
+         "optimeDurableDate" : ISODate("2020-03-05T05:24:38Z"),
+         "lastHeartbeat" : ISODate("2020-03-05T05:24:44.114Z"),
+         "lastHeartbeatRecv" : ISODate("2020-03-05T05:24:43.998Z"),
+         "pingMs" : NumberLong(0),
+         "lastHeartbeatMessage" : "",
+         "syncSourceHost" : "m1.example.net:27017",
+         "syncSourceId" : 0,
+         "infoMessage" : "",
+         "configVersion" : 1
+      }
+   ],
+   "ok" : 1,
+   "$clusterTime" : {
+      "clusterTime" : Timestamp(1583385878, 1),
+      "signature" : {
+         "hash" : BinData(0,"9C2qcGVkipEGJW3iF90qxb/gIwc="),
+         "keyId" : NumberLong("6800589497806356482")
+      }
+   },
+   "operationTime" : Timestamp(1583385878, 1)
+}
