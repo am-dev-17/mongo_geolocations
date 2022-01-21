@@ -166,3 +166,28 @@ data bearing must be > major of voting for {w:majority } else {w:1}
 
 
 Write Concern For Replica Sets 
+Implicit default write concern will be determined by:
+number of data nodes > 1+ (number of voting/2) = {w:majority} else {w: 1}
+
+What is Journaling?
+Journaling is required to recover information that occured after the last checkpoint captured by WiredTiger
+Journaling does the following things:
+ - Looks into the data file to find the identifier of the last checkpoint.
+ - searches in the journal files for the record that matches the identifier of the last checkpoint
+ - Will apply the operation in the journal file since the last checkpoint
+
+ For clusters where members have journaling enabled,
+  combining "majority" write concern with j : true can prevent rollback of write concern acknowledged data.
+
+db.products.insertOne(
+   { item: "envelopes", qty : 100, type: "Clasp" },
+   { writeConcern: { w: "majority" , wtimeout: 5000 } }
+)
+
+Global Default Write Concern 
+getdefaultRWConcern
+setDefaultRQConcern
+
+Replica Set Write Acknowledgement
+STARTUP2 statw will not participate in write majorities
+

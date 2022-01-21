@@ -1,0 +1,146 @@
+Sharding 
+Understand horizontal scaling and how sharding provides this capability in Mongodb 
+Know how to construct a good shard key and what can go wrong with selecting a shard key 
+Understand the role of the load balancer
+Know the role of the config servers and how they work 
+
+Sharding is concerned with horizontal scaling of reads and writes 
+
+Sharded Cluster 
+shard -> Each shard will contain a subset of the sharded data. Each shard has the ability to be deployed as a replica set 
+mongos -> The mongos is the query router serving between the client and the sharded cluster and supports hedged reads.
+config servers -> Stores configuration and metadata settings for the cluster 
+
+MongoDB uses the shard key to distribute the collection's documents
+ across shards. The shard key consists of a field or multiple fields in the documents.
+
+Missing Shard key fields 
+ - missing key fields will cause the document to fall in the same range as null values for the keys 
+
+ db.shardedcollection.find( { $or: [ { x: { $exists: false } }, { y: { $exists: false } } ] } )
+
+ Shard a collection  ("<database>.<collection>").
+sh.shardCollection(<namespace>, <key>) // Optional parameters omitted
+
+Shard Key Fields and Values 
+Change a documents shard key value 
+- 4.2 and later you can change the shard key value
+
+Change a documents shard key value 
+db.sales.updateOne(
+  { _id: 12345, location: "" },
+  { $set: { location: "New York"} }
+)
+
+
+
+
+Refine shard key by using suffix adding fields to the shard key 
+db.adminCommand( {
+   refineCollectionShardKey: "test.orders",
+   key: { customer_id: 1, order_id: 1 }
+} )
+In MongoDB 4.2 and earlier, the choice of shard key cannot be changed after sharding.
+
+Reshard a Collection by changing the shard key 
+We can only reshard a collection in mongodb 5.0 and above
+
+Period of 2 seconds where the collection that is being resharded BLOCKS ALL WRITES.
+You have rewritten your application code to update your queries to use both the current shard key and the new shard key.
+
+No index builds can be in progress
+ db.adminCommand(
+    {
+      currentOp: true,
+      $or: [
+        { op: "command", "command.createIndexes": { $exists: true }  },
+        { op: "none", "msg" : /^Index Build/ }
+      ]
+    }
+)
+
+The resharding command:
+db.adminCommand({
+  reshardCollection: "<database>.<collection>",
+  key: <shardkey>
+})
+
+db.getSiblingDB("admin").aggregate([
+  { $currentOp: { allUsers: true, localOps: false } },
+  {
+    $match: {
+      type: "op",
+      "originatingCommand.reshardCollection": "<database>.<collection>"
+    }
+  }
+])
+
+remainingOperationTimeEstimatedSecs will decrease 
+When the writes time is below 2 seconds ALL WRITES will be blocked 
+
+
+Shard Key Index 
+To shard a populated collection, the collection must have an index that starts with the shard key 
+If the collection is empty then mongodb will create the correlating index key 
+
+Shard Key indexes 
+All sharded collections must have an index that supports the shard key 
+exact shard key or an index where the shard key is the prefix
+
+sh.shardCollection()
+
+Shard Key Strategy
+sharded collections divide data into chunks 
+
+Shard collection chunks 
+inclusive keyed values and they can be split or sent to other shards 
+
+To even out shards a balancer will run to transfer shards if needed 
+Shard Cluster Balancer 
+The shard cluster balancer is a background process that runs and monitors the number of chunks on each shard.
+The shard cluster balancer will run on the config server replica set 
+
+Data Partitioning with Chunks 
+
+Advantages of Sharding 
+
+Reads/Writes 
+READ/WRITES are distributed across the shards in the sharded cluster 
+
+Considerations before sharding 
+
+Choose a shard key 
+The ideal shard key allows MongoDB to distribute documents evenly throughout the cluster while also facilitating common query patterns.
+Each unique shard key value can exist on no more than a single chunk at any given time
+
+Monotonically Changing Shard Keys 
+A shard key on a value that increases or decreases monotonically is more likely to distribute inserts to a single chunk within the cluster.
+
+Sharding Query Patterns 
+The ideal shard key distributes data evenly across the sharded cluster while also facilitating common query patterns. When you choose a shard key,
+ consider your most common query patterns and whether a given shard key covers them
+
+Connecting to a sharded cluster 
+you must connect to a mongos router to interact with any collection that is sharded 
+
+
+Sharding Strategy 
+Hashed Sharding - Involves computing a hash of the shard key field's value. Each chunk is then going to be assigned a range based on
+the hashed shard key values.
+
+However, hashed distribution means that range-based queries on the shard key are less likely to target 
+a single shard, resulting in more cluster wide broadcast operations
+
+Ranged Sharding - Ranged sharding involves dividing data into ranges based on the shard key values. 
+Each chunk is then assigned a range based on the shard key values.
+
+A range of shard keys whose values are "close" are more likely to reside on the same chunk. This allows for targeted operations as a mongos can 
+route the operations to only the shards that contain the required data.
+
+Zones in sharded clusters 
+In sharded clusters, you can create zones of sharded data based on the shard key. 
+You can associate each zone with one or more shards in the cluster. A shard can associate with any number of zones. In a balanced cluster,
+ MongoDB migrates chunks covered by a zone only to those shards associated with the zone.
+
+ Shards/Mongos/Config Server 
+ 
