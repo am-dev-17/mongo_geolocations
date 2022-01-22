@@ -143,4 +143,290 @@ You can associate each zone with one or more shards in the cluster. A shard can 
  MongoDB migrates chunks covered by a zone only to those shards associated with the zone.
 
  Shards/Mongos/Config Server 
- 
+ Shards 
+
+A shard is going to contain a subset of data for a sharded cluster 
+Together the cluster's shards will hold the entire data set for the cluster 
+Alaways connect to mongos to perform cluster level operations including read/write operations
+
+Primary shard 
+The primary shard will hold all of the un-sharded data
+
+Shard Status 
+sh.status() to see an overview of the cluster.
+Includes which shard is primary and also the chunk distribution across the shards.
+
+Sharded Cluster Security
+use authentication 
+
+mongos - The shard cluster router 
+
+mongos tracks which data is on what shards by storing metadata on the config servers 
+
+Routing and results process 
+a mongos instance routes a query to a cluster by :
+- Determining the list of shards that must receive the query 
+- Establishing a cursor on all targeted shards
+- Mongos will then merge the data from each targeted shard and returns the result document 
+
+How Mongos handles query Modifiers
+Sorting -> Mongos will open a result cursor and will sort there 
+Limits -> Limit is passed to each individual shard and then re-applies the limit before returning the result 
+Skips -> Retrieves the result from each shard and then applies the skip 
+
+Read Preference and Shards 
+
+Read Prefence Recap 
+- p-s-sp-pp 
+
+Read Preference and Shards 
+
+In sharded clusters, you can create zones of sharded data based on the shard key. You can associate each zone with one or more shards in the cluster. A shard can associate with any number of zones. In a balanced cluster, MongoDB migrates chunks covered by a zone only to those shards associated with the zone.
+
+Broadcast Operations 
+mongos instances broadcast queries to all shards for the collection unless the mongos can determine which shard or subset 
+of shards stores this data.
+
+You want to favor queries that result in targeted operation over those that result in a broadcast operation 
+
+Targeted Operations 
+if the query has the shard key or the prefix of a shard key, mongos that perform targeted operations 
+shard key: { a: 1, b: 1, c: 1 }
+
+{ a: 1 }
+{ a: 1, b: 1 }
+
+
+Index use :
+If the query does not include the shard key, the mongos must send the query to all shards as a "scatter/gather" operation.
+ Each shard will, in turn, use either the shard key index or another more efficient index to fulfill the query.
+
+Sharding Config Servers 
+Config servers store the metadata for a sharded cluster. The metadata reflects the state and organization for all data and components
+within the sharded cluster.
+The metadata also includes the list of chunks on every shard and the range that define the Chunks
+
+Deploy a sharded cluster 
+
+Create the config server replica set 
+mongod 
+sharding:
+  clusterRole: configsvr
+replication:
+  replSetName: <replica set name>
+net:
+  bindIp: localhost,<hostname(s)|ip address(es)>
+
+mongod --config <path-to-config-file>
+
+Connect to one of the config servers 
+mongosh --host <hostname> --port <port>
+
+
+Initiate the replica set 
+rs.initiate(
+  {
+    _id: "<replSetName>",
+    configsvr: true,
+    members: [
+      { _id : 0, host : "cfg1.example.net:27019" },
+      { _id : 1, host : "cfg2.example.net:27019" },
+      { _id : 2, host : "cfg3.example.net:27019" }
+    ]
+  }
+)
+
+rs.initiate()
+
+
+Create the shard replica sets 
+mongod 
+sharding:
+    clusterRole: shardsvr
+replication:
+    replSetName: <replSetName>
+net:
+    bindIp: localhost,<ip address>
+mongod --config <path-to-config-file>
+mongosh --host <hostname> --port <port>
+rs.initiate()
+
+rs.initiate(
+  {
+    _id : <replicaSetName>,
+    members: [
+      { _id : 0, host : "s1-mongo1.example.net:27018" },
+      { _id : 1, host : "s1-mongo2.example.net:27018" },
+      { _id : 2, host : "s1-mongo3.example.net:27018" }
+    ]
+  }
+)
+
+Start a mongos for the Sharded Cluster
+sharding:
+  configDB: <configReplSetName>/cfg1.example.net:27019,cfg2.example.net:27019
+net:
+  bindIp: localhost,<hostname(s)|ip address(es)>
+
+mongos --config <path-to-config>
+mongosh --host <hostname> --port <port>
+
+
+Connect to mongos and add the shards 
+sh.addShard( "<replSetName>/s1-mongo1.example.net:27018,s1-mongo2.example.net:27018,s1-mongo3.example.net:27018")
+sh.enableSharding("<database>")
+ in mongos 
+
+sh.shardCollection("<database>.<collection>", { <shard key field> : "hashed" } )
+
+sh.shardCollection("<database>.<collection>", { <shard key field> : 1, ... } )
+
+sh.getBalancerState()
+
+sh.isBalancerRunning()
+
+
+db.settings.updateOne(
+   { _id: "balancer" },
+   { $set: { activeWindow : { start : "<start-time>", stop : "<stop-time>" } } },
+   { upsert: true }
+)
+
+
+Data Partitioning with Chunks
+
+MongoDB splits chunks when they grow beyond the configured chunk size. Both inserts and updates can trigger a chunk split.
+
+Migration Thresholds
+
+Migrate Chunks in a Sharded Cluster 
+db.adminCommand( { moveChunk : "myapp.users",
+                   find : {username : "smith"},
+                   to : "mongodb-shard3.example.net" } )
+
+Modify Chunk Size in A Sharded Cluster 
+connect to mongos 
+use config 
+db.settings.insertOne( { _id:"chunksize", value: <sizeInMB> } )
+
+Chunks 
+64MB default size 
+Config servers hold the mapping of the chunks to the shards 
+db.chunks.findOne()
+Chunk Size -> 64MB default chunk size 
+chunksize is configurable at any time 
+sh.status() 
+
+db.settings.save({
+    _id: "chunksize", value: 2
+})
+to see some action we need to do something on mongos - > insert or something 
+
+Shard Key Values Frequency
+
+Jumbo Chunks come from the fact that the chunk is larger than the defined chunk 
+- often cannot be split 
+- jumbo chunks cannot be moved 
+- make sure shard key frequency is good 
+
+Balancing 
+Remember that we can only move one chunk per shard at a time for a single shard 
+
+Config Servers and Cluster Metadata 
+What data config servers obtain 
+How to access data in config servers 
+What happens when a config server is unavailable
+What types of servers constitute the config servers 
+What happens when your config server cannot elect a primary 
+
+Config Servers 
+Config servers will store the metadata of a sharded cluster 
+the metadata includes a list of chunks on every shard and the ranges that define the chunks 
+
+Replica Set Config Servers 
+The config database contains the collections that contain the sharded cluster metadata. 
+MongoDB writes data to the config database when the metadata changes, such as after a chunk migration or a chunk split.
+
+Config Server Availability 
+If the config server replica set loses its primary and cannot elect a primary, the cluster's metadata becomes read only. You can still read and write data from the shards, but no chunk migration or chunk splits will occur until the replica set can elect a primary.
+No chunk migration or chunk splitting will occur on the sharded cluster if there is no config server primary 
+
+If all config servers become unavailable then the cluster can become inoperable
+
+Sharded Cluster Metadata 
+use config 
+
+Setting up a sharded cluster 
+sh.status() will give you details about the sharded cluster 
+
+Queries in Sharded Cluster 
+Performance implications for targeted vs scatter-gather queries  -> If it is a scatter-gather query, then this means that we will need to 
+send the query to all shards and then get the data back this is an expensive data procedure
+Whereas a targeted operation will only look at a subset of the shards and need to send data there and get back the the results
+Given a query and description of a sharding configuration whether targeted or scatter-gather -> if the lookup is using the shard key 
+or the shard key is a prefix of the query 
+How to read the .explain() output to determine which shards were affected by a query 
+how sorting and aggregation work in a sharded cluster 
+what mongos nodes are and their role in the sharded cluster 
+
+
+Broadcast Operations 
+he updateMany() and deleteMany() methods are broadcast operations, unless the query document specifies the shard key in full.
+a,b,c shard key then targeted operation will work on any prefix of the shard key !
+{ a: 1 }
+{ a: 1, b: 1 }
+
+
+Explain Results 
+db.collection.explain()
+
+For sharded collections, explain includes the core query planner and server information for each accessed shard in the shards field:
+
+"queryPlanner" : {
+   "mongosPlannerVersion" : <int>,
+   "winningPlan" : {
+      "stage" : <STAGE1>,
+      "shards" : [
+         {
+            "shardName" : <string>,
+            "connectionString" : <string>,
+            "serverInfo" : {
+               "host" : <string>,
+               "port" : <int>,
+               "version" : <string>,
+               "gitVersion" : <string>
+            },
+            "plannerVersion" : <int>,
+            "namespace" : <string>,
+            "parsedQuery" : <document>,
+            "queryHash" : <hexadecimal string>,
+            "planCacheKey" : <hexadecimal string>,
+            "optimizedPipeline" : <boolean>, // Starting in MongoDB 4.2, only appears if true
+            "winningPlan" : {
+               "stage" : <STAGE2>,
+               "inputStage" : {
+                  "stage" : <STAGE3>
+                  ...,
+               }
+            },
+            "rejectedPlans" : [
+               <candidate plan 1>,
+               ...
+            ]
+         },
+         ...
+      ]
+   }
+}
+
+If the result of the query is not sorted, the mongos instance opens a result cursor that "round robins" results from all cursors on the shards.
+
+Aggregation Pipeline and Sharded Collections 
+The aggregation pipeline supports operations on sharded collections. This section describes behaviors specific to the aggregation pipeline and sharded collections.
+If the pipeline starts with an exact $match on a shard key, and the pipeline does not contain $out or $lookup stages, the entire pipeline runs on the matching shard only.
+
+When aggregation operations run on multiple shards, the results are routed to the mongos to be merged, except in the following cases:
+If the pipeline includes the $out or $lookup stages, the merge runs on the primary shard.
+If the pipeline includes a sorting or grouping stage, and the allowDiskUse setting is enabled, the merge runs on a randomly-selected shard.
+
+
