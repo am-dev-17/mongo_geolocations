@@ -1,0 +1,57 @@
+Storage Engines 
+Concurrency levels for WiredTiger 
+The compression algorithms available for WiredTiger 
+The effects of these features on the performance of MongoDB
+
+The storage engine is responsible for how data is stored 
+both in memory and on disk .
+
+WiredTiger Storage Engine 
+
+WiredTiger Document Level Concurrency 
+Clients can modify different documents of a collection 
+at the same time with WiredTiger 
+Optimistic locking mechanism is used 
+
+WiredTiger Snapshots and Checkpoints 
+Uses MultiVersion Concurrency Control (MVCC)
+The data is snapshotted and then the new data is written 
+and then a checkpoint is created upon operation completion
+checkpointing allows us to have recovery points of the data 
+
+WiredTiger does checkpointing at 60 second intervals by default 
+60 seconds or when 2GB of journal data has been written 
+whichever occurs first 
+
+The new checkpoint becomes accessible and permanent when WiredTiger's metadata table is atomically updated to reference the new checkpoint. 
+
+WiredTiger Journal 
+The journal is a log that will record all actions and once 
+2GB or 60 seconds have been written a checkpoint will occur 
+The journal can be used to record the data and recover it even after the 
+checkpoint 
+
+WiredTiger Compression 
+MongoDB supports compression for all collections and indexes 
+minimize storage but higher CPU cost 
+
+Compression Algorithms available to WiredTiger 
+snappy 
+zlib
+zstd 
+
+In-Memory Storage Engine 
+engine does not maintain any on-disk data, including configuration data, indexes, user credentials, etc.
+
+mongod --storageEngine inMemory --dbpath <path>
+
+WiredTiger Cache 
+WiredTiger internal cache -> 
+50% of( Ram-1GB) or 256MB whichever is larger 
+
+4GB? RAM 
+
+4-1 = 3 / 2 = 1.5GB
+
+
+

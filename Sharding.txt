@@ -429,4 +429,78 @@ When aggregation operations run on multiple shards, the results are routed to th
 If the pipeline includes the $out or $lookup stages, the merge runs on the primary shard.
 If the pipeline includes a sorting or grouping stage, and the allowDiskUse setting is enabled, the merge runs on a randomly-selected shard.
 
+Queries in a sharded cluster 
+
+The shard key and what makes a good shard key 
+Shard keys are mutable and they can be changed unless 
+the shard key field is _id field 
+
+What makes a good shard key:
+High cardinality
+High selectivity
+Non-monotonically increasing/decreasing values
+What these mean
+
+
+Shard Keys 
+The shard key determines the distribution of the collections 
+documents among the cluster's shards 
+
+All sharded collections must have an index that supports the
+shard key 
+
+Unique Indexes 
+
+the index on the shard key
+a compound index where the shard key is a prefix
+
+For a to-be-sharded collection, you cannot shard the collection if the collection has other unique indexes.
+For a ranged sharded collection, only the following indexes can be unique:
+
+the index on the shard key
+a compound index where the shard key is a prefix
+the default _id index; however, the _id index only enforces the uniqueness constraint per shard if the _id field is not the shard key or the prefix of the shard key.
+
+Missing Shard key fields 
+missing shard key fields will fall in the same range as 
+null values for the chunk 
+
+
+Hashed Sharding 
+Hashed sharding uses either a single field hashed index 
+or a compound hashed index 
+sh.shardCollection( "database.collection", { <field> : "hashed" } )
+
+
+sh.shardCollection(
+  "database.collection",
+  { "fieldA" : 1, "fieldB" : 1, "fieldC" : "hashed" }
+)
+
+
+Ranged Sharding 
+range based sharding involves dividing data into 
+contiguous ranges determined by shard key values 
+
+sh.shardCollection( "database.collection", { <shard key> } )
+
+Primary Shard 
+what data the primary shard contains 
+What read and write operations occur on the primary shard 
+How aggregation queries use the primary shard 
+
+The primary shard will hold all un-sharded collections for 
+the database 
+
+Shard Status 
+sh.status() will tell you the primary shard 
+
+If the aggregation pipeline includes a $out or a $lookup 
+then the merge will run on the primary shard 
+
+$match has an exact match with shard key then it will 
+run only on that shard itself
+
+else the aggregation must be sent to mongos and then the 
+results will be combined there 
 

@@ -1,0 +1,132 @@
+Server Tools
+How to export and import data using server tools 
+How to monitor basic operations on the server using server tools
+For the developer exam I will need to know:
+mongoimport
+mongoexport
+mongostat
+mongotop 
+
+mongoimport - The mongoimport tool will import content from 
+an extended json , csv, or tsv 
+
+mongoimport <options> <conn-string> <file>
+
+mongoexport --jsonFormat=canonical --collection=<coll> <connection-string>
+
+mongoimport runs on the commandline
+
+mongoimport --db=users --collection=contacts --file=contacts.json 
+
+Replace Matching Documents during import 
+--mode upser -> Replaces existing documents in the db 
+that match the import file 
+Mongodb documents matching based on _id 
+
+mongoimport -c=people -d=example --mode=upsert --file=people.json 
+{
+   "_id" : ObjectId("580100f4da893943d393e909"),
+   "username" : "crystal",
+   "likes" : [ "running", "pandas", "software development" ]
+}
+
+
+Merge Matching Documents During Import 
+{
+   "_id" : ObjectId("580100f4da893943d393e909"),
+   "name" : "Crystal Duncan",
+   "region" : "United States",
+   "email" : "crystal.duncan@example.com",
+   "username" : "crystal",
+   "likes" : [
+      "running",
+      "pandas",
+      "software development"
+   ]
+}
+--merge mode will merge the two documents 
+mongoimport -c=people -d=example --mode=merge --file=people-20160927.json
+
+Delete Matching Documents 
+mongoimport -c=people -d=example --mode=delete --file=people-20160927.json
+
+--upsertFields can be used to specify a different field other 
+than _id field 
+
+
+mongoexport -> Will allow you to export data 
+from mongodb in CSV/JSON/TSV format 
+
+Examples of mongoexport 
+
+users db and the contacts collection will be exported 
+
+mongoexport --db=users --collection=contacts --type=csv
+--field= name, address --out=/opt/backups/contacts.csv 
+
+name, address
+Sophie Monroe, 123 Example Road
+Charles Yu, 345 Sample Street
+
+
+Use a file to specify the fields to export in csv format 
+fields.txt 
+mongoexport --db=users --collection=contacts --type=csv 
+--fieldFile=fields.txt --out=contacts.csv 
+
+mongoexport --db=users --collection=contacts --type=csv --fields=name,address --noHeaderLine --out=/opt/backups/contacts.csv
+
+mongoexport --db=sales --collection=contacts --out=contacts.json
+
+Export query results 
+mongoexport --db=sales --collection=contacts --query='{"dept": "ABC", date: { $gte: { "$date": "2018-01-01T00:00:00.000Z" } }}'
+
+mongostat 
+
+the mongostat utility provides a quick overview of the status 
+of a currently running mongodb or mongos instance 
+
+mongostat --rowcount=20 1
+mongostat --rowcount=20
+mongostat -n=20 1
+mongostat -n=20
+
+mongostat --rowcount=0 300
+mongostat -n=0 300
+mongostat 300
+
+mongostat --rowcount=12 300
+mongostat -n=12 300
+
+Add fields to mongostat output 
+mongostat -O='host,version,network.numRequests=network requests'
+
+insert query update delete getmore command dirty used flushes vsize   res qrw arw net_in net_out conn                time            host version network requests
+    *0    *0     *0     *0       0     2|0  0.0% 0.0%       0 2.51G 19.0M 0|0 0|0   158b   39.4k    2 Oct 11 12:14:45.878 localhost:37017  3.3.14               91
+    *0    *0     *0     *0       0     1|0  0.0% 0.0%       0 2.51G 19.0M 0|0 0|0   157b   39.3k    2 Oct 11 12:14:46.879 localhost:37017  3.3.14               95
+    *0    *0     *0     *0       0     1|0  0.0% 0.0%       0 2.51G 19.0M 0|0 0|0   157b   39.2k    2 Oct 11 12:14:47.884 localhost:37017  3.3.14               99
+
+
+mongotop 
+mongotop provides a method to track the amount of time a 
+mongodb instance mongod spends reading and writing data 
+
+mongotop 15
+2019-04-29T15:35:27.785-0400 connected to: 127.0.0.1
+
+
+                    ns    total    read    write    2019-04-29T15:35:57-04:00
+    admin.system.roles      0ms     0ms      0ms
+    admin.system.users      0ms     0ms      0ms
+  admin.system.version      0ms     0ms      0ms
+config.system.sessions      0ms     0ms      0ms
+     local.startup_log      0ms     0ms      0ms
+  local.system.replset      0ms     0ms      0ms
+
+mongotop 300
+
+Basic Server Monitoring 
+mongostat -> Gives you stats about the mongodb instance 
+mongotop -> read and write stats only 
+
+
