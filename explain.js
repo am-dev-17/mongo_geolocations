@@ -65,7 +65,7 @@ db.collection.explain('queryPlanner')
 // Which index was used by the query - indexName
 // When a collection scan occurs - ColScan
 // How many index entries were viewed during the query - keysExamined
-// Which shards were involved in the query for a sharded collection  -- 
+// Which shards were involved in the query for a sharded collection  -- under shards and shardNames
 // How to recognize that a query is covered -- if the IXSCAN is not a desendant of a fetch stage
 // Whether or not an index was used to sort the query -- SORT stage will be added to executionStats
 // How long the query took (or was estimated to take)  --- explain.executionStats.executionStages.executionTimeMillisEstimate
@@ -249,3 +249,19 @@ db.products.find(
 // prefix operations further optimize by allowing the index to be searched by it ^ABC
 // ^ \A are both beginning anchors
 // /^a/ is the fastest as it is left anchor
+
+
+// {
+//     "stage" : "AND_SORTED",
+//     "inputStages" : [
+//        {
+//           "stage" : "IXSCAN",
+//           ...
+//        },
+//        {
+//           "stage" : "IXSCAN",
+//           ...
+//        }
+//     ]
+//  }
+
