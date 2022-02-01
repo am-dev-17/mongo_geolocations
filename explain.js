@@ -265,3 +265,10 @@ db.products.find(
 //     ]
 //  }
 
+SchemaName.index({ email: 1 }, {
+    unique: true,
+    partialFilterExpression: {
+      'email': { $exists: true, $gt: '' }
+    }
+  });
+//   
