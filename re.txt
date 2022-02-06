@@ -1,0 +1,1452 @@
+{ w: <value>, j: <boolean>, wtimeout: <number> }
+The j is to request acknowledgment that is has written to the journal
+The wtimeout option to specify the time limit to prevent write operations from blocking indefinitely
+w is the level of acknowledgment needed from mongod instances 
+
+The w option 
+remember the w option only applies to VOTING MEMBERS
+{w:"majority"} is the default write concern for most Mongodb deployments
+
+The on-disk journal for writing operations 
+Journaling
+-> To prevent durability in case of a failure mongodb uses write ahead logging to on-disk journal files 
+
+-> WiredTiger uses checkpointing for writes and captures them BUT we will need to use journaling if we need data between those checkpoints
+
+Read Concern 
+-> Read concern local will return data from instances with no guarantee that data has been written to a majority of instances
+-> This means that the data might be rolled back 
+
+Read Concern Local -> If it is local than the data that is read may not have majority write concern and this means that the data might be rolled back.
+
+Read Concern Available -> Same as local 
+
+Read Concern Majority -> The query will only return data that has been acknowledged by a majority of the replica set 
+
+For operations in a multi-document transaction, when a transaction commits, all data changes made in the transaction are saved and visible outside the transaction. That is, a transaction will not commit some of its changes while rolling back others.
+
+Mirrored Reads
+-> Common reads are going to warm up the cache after the election of a primary to a secondary.
+-> Mirrored reads pre-warm the caches of electable secondary replica set members.
+
+Transactions 
+Multi-document transactions that contain read operations must use read preference primary. All operations in a given transaction must route to the same member.
+
+Until a transaction commits, the data changes made in the tr
+
+Change Streams -> Change Streams allow applications to tail logs and change events to the mongod instances without the need to read the oplog
+members[n].priority is going to allow for you to control if the member can become a primary
+
+Replica Set Nodes
+Arbiiter, Delayed, Votes, Priority 
+
+Replica Set Members
+- Primaries and secondaries 
+ Replica Set Arbiter 
+
+Delay Replica Set members
+-> a delayed replica set member will reflect the delayed time so that it can be used for recovery processes 
+-> Requirements to be a delayed replica set member -> priority 0 member and it Must be hidden They can vote in an election if needed 
+preferred to be non-voting 
+
+{
+   "_id" : <num>,
+   "host" : <hostname:port>,
+   "priority" : 0,
+   "secondaryDelaySecs" : <seconds>,
+   "hidden" : true
+}
+
+Hidden Replica Set Members 
+-> Contains a copy of the primary's data but it will be invisible to client applications 
+-> hidden replica set members must always be priority 0 and they cannot become primary 
+*hidden members may vote in elections 
+
+Configuring non-voting replica set members
+members[n].voting = 0
+
+Remember that we will use rs.reconfig to reconfigure the replica set 
+
+connect to the mongosh server: mongosh --host "<hostname>:<port>"
+
+cfg = rs.conf();
+
+cfg.members[n].votes = 0;
+cfg.members[n].priority = 0;
+
+rs.reconfig(cfg);
+
+Converting a secondary to an arbiter 
+rs.remove("<hostname><:port>") -> the secondary member 
+
+rs.conf()
+ 
+mv /data/db /data/db-old
+
+mkdir /data/db
+
+rs.addArb("<hostname><:port>")
+
+"arbiterOnly" : true
+
+Replica Set Configurations
+{
+  _id: <string>,
+  version: <int>,
+  term: <int>,
+  protocolVersion: <number>,
+  writeConcernMajorityJournalDefault: <boolean>,
+  configsvr: <boolean>,
+  members: [
+    {
+      _id: <int>,
+      host: <string>,
+      arbiterOnly: <boolean>,
+      buildIndexes: <boolean>,
+      hidden: <boolean>,
+      priority: <number>,
+      tags: <document>,
+      secondaryDelaySecs: <int>,
+      votes: <number>
+    },
+    ...
+  ],
+  settings: {
+    chainingAllowed : <boolean>,
+    heartbeatIntervalMillis : <int>,
+    heartbeatTimeoutSecs: <int>,
+    electionTimeoutMillis : <int>,
+    catchUpTimeoutMillis : <int>,
+    getLastErrorModes : <document>,
+    getLastErrorDefaults : <document>,
+    replicaSetId: <ObjectId>
+  }
+}
+
+Initiating a replica set 
+rs.initiate(repl) is going to allow for you to initiate a replica set 
+
+rs.initiate(
+   {
+      _id: "myReplSet",
+      version: 1,
+      members: [
+         { _id: 0, host : "mongodb0.example.net:27017" },
+         { _id: 1, host : "mongodb1.example.net:27017" },
+         { _id: 2, host : "mongodb2.example.net:27017" }
+      ]
+   }
+)
+
+Deploying a replica set 
+This tutorial describes how to create a three-member replica set from three existing mongod instances running with access control disabled.
+
+Use the --bind_ip option to ensure that MongoDB listens for connections from applications on configured addresses.
+
+mongod --bind_ip local-host, My-Example_Associated-Hostname 
+
+mongosh --host My-Example-Associated-Hostname
+
+mongosh --host 198.51.100.1
+
+Deploying a replica set 
+Start each member of the replica set with the appropriate options 
+replication.replSetName option to the replica set name 
+net.bindIp so that the mongod instance can be binded from mongosh 
+
+Replica Set Member
+Hostname
+Member 0
+mongodb0.example.net
+Member 1
+mongodb1.example.net
+Member 2
+mongodb2.example.net
+
+mongod --replSet "rs0" --bind_ip localhost,<host name / IP Address>
+
+replication:
+   replSetName: "rs0"
+net:
+   bindIp: localhost,<hostname(s)|ip address(es)>
+
+mongod --config <path-to-config>
+
+Connect to one of the instances 
+
+initiate the replica set 
+
+rs.initiate()
+rs.initiate( {
+   _id : "rs0",
+   members: [
+      { _id: 0, host: "mongodb0.example.net:27017" },
+      { _id: 1, host: "mongodb1.example.net:27017" },
+      { _id: 2, host: "mongodb2.example.net:27017" }
+   ]
+})
+
+
+rs.conf()
+
+{
+   "_id" : "rs0",
+   "version" : 1,
+   "protocolVersion" : NumberLong(1),
+   "members" : [
+      {
+         "_id" : 0,
+         "host" : "mongodb0.example.net:27017",
+         "arbiterOnly" : false,
+         "buildIndexes" : true,
+         "hidden" : false,
+         "priority" : 1,
+         "tags" : {
+
+         },
+         "secondaryDelaySecs" : NumberLong(0),
+         "votes" : 1
+      },
+      {
+         "_id" : 1,
+         "host" : "mongodb1.example.net:27017",
+         "arbiterOnly" : false,
+         "buildIndexes" : true,
+         "hidden" : false,
+         "priority" : 1,
+         "tags" : {
+
+         },
+         "secondaryDelaySecs" : NumberLong(0),
+         "votes" : 1
+      },
+      {
+         "_id" : 2,
+         "host" : "mongodb2.example.net:27017",
+         "arbiterOnly" : false,
+         "buildIndexes" : true,
+         "hidden" : false,
+         "priority" : 1,
+         "tags" : {
+
+         },
+         "secondaryDelaySecs" : NumberLong(0),
+         "votes" : 1
+      }
+      
+   ],
+   "settings" : {
+      "chainingAllowed" : true,
+      "heartbeatIntervalMillis" : 2000,
+      "heartbeatTimeoutSecs" : 10,
+      "electionTimeoutMillis" : 10000,
+      "catchUpTimeoutMillis" : -1,
+      "getLastErrorModes" : {
+
+      },
+      "getLastErrorDefaults" : {
+         "w" : 1,
+         "wtimeout" : 0
+      },
+      "replicaSetId" : ObjectId("585ab9df685f726db2c6a840")
+   }
+}
+
+Use the rs.status() to identify that the replica set is primary 
+
+
+Initial Sync 
+The initial sync occurs if a new member joins and we are allowed to configure which member it copies from 
+remember that it will copy all data except local and build all indexes 
+
+
+Replica Set Data Synchronization
+Initial sync is used to populate new members with data and this will allow for them to receive a copy of the data 
+
+Initial Sync Source Selection 
+->initialSyncSourceReadPreference is going to the option that will determine the initial sync during a new member joining a replica set 
+
+Replica Set Initial Sync will clone all databases except for the local database 
+Will pull all newly added oplog records during the data copy 
+Will apply all changes to the data set using the oplog from the source 
+
+Streaming replication 
+-> reduces risk for losing write operations and 
+-> also latency on w:majority 
+
+Resync a member of a replica set 
+
+
+Replica Set deployment tutorials 
+
+Adding an Arbiter to a Replica Set 
+
+Bind the ip address of the arbiter node 
+mongod --bind_ip localhost,My-Example-Associated-Hostname
+
+start the mongod instance with the replSetName and also the bind ip 
+mongod --port 27017 --dbpath /var/lib/mongodb/arb --replSet rs --bind_ip localhost,<hostname(s)|ip address(es)>
+
+rs.addArb("host:port") on the primary replica set member 
+
+Converting a standalone to a replica set 
+
+Shut down the standalone mongod instance.
+Restart the instance. Use the --replSet option to specify the name of the new replica set.
+
+mongod --port 27017 --dbpath /srv/mongodb/db0 --replSet rs0 --bind_ip localhost,<hostname(s)|ip address(es)>
+
+rs.initiate()
+to initiate the replica set 
+
+You can use the rs.add() method to add a member to the replica set 
+
+Add members to a replica set 
+
+To override the default binding and bind to other IP addresses, use the net.bindIp configuration file setting or the --bind_ip command-line option to specify a list of hostnames or IP addresses.
+
+Remove members from a replica set 
+You can remove a member using rs.remove()
+Or you can remove a member using rs.reconfig()
+
+Removing a member of a rs using rs.remove()
+
+Shut down the mongod instance for the member you wish to remove. To shut down the instance, connect using mongosh and use the db.shutdownServer() method.
+
+Connect to the replica set's current primary. To determine the current primary, use db.hello() while connected to any member of the replica set.
+
+rs.remove("mongod3.example.net:27017")
+rs.remove("mongod3.example.net")
+
+Removing a member using rs.reconfig()
+
+Replace a replica set member 
+To change the hostname for a replica set member modify the members[n].host field. The value of members[n]._id field will not change when you reconfigure the set.
+
+cfg = rs.conf()
+cfg.members[0].host = "mongo2.example.net"
+rs.reconfig(cfg)
+
+Replica Set Elections 
+
+Replica sets use elections to determine which set member will become primary. Replica sets can trigger an election in response to a variety of events, such as:
+
+Adding a new node to the replica set,
+initiating a replica set,
+performing replica set maintenance using methods such as rs.stepDown() or rs.reconfig(), and
+the secondary members losing connectivity to the primary for more than the configured timeout (10 seconds by default).
+
+The median time before a cluster elects a new primary should not typically exceed 12 seconds, assuming default replica configuration settings. This includes time required to mark the primary as unavailable and call and complete an election. You can tune this time period by modifying the settings.electionTimeoutMillis replication configuration option. 
+
+Election Voting members maximum is 7 Members
+Non-voting members must have a priority of 0
+Members with priority greater than 0 cannot have 0 votes 
+
+Non-voting members 
+{
+   "_id" : <num>,
+   "host" : <hostname:port>,
+   "arbiterOnly" : false,
+   "buildIndexes" : true,
+   "hidden" : false,
+   "priority" : 0,
+   "tags" : {
+
+   },
+   "secondaryDelaySecs" : NumberLong(0),
+   "votes" : 0
+}
+
+Do not alter the number of votes to control which members will become primary. Instead, modify the members[n].priority option. Only alter the number of votes in exceptional cases. For example, to permit more than seven members.
+
+Rollback
+Rollbacks during replica set failover
+A rollback is going to revert writes to a former primary when it rejoins the replica set after a failover 
+
+A rollback is necessary only if the primary had accepted write operations that the secondaries had not successfully replicated before the primary stepped down.
+
+Starting in version 4.0, MongoDB adds the parameter createRollbackDataFiles to control whether or not rollback files are created during rollbacks.
+
+For replica sets, the write concern { w: 1 } only provides acknowledgement of write operations on the primary. Data may be rolled back if the primary steps down before the write operations have replicated to any of the secondaries. This includes data written in multi-document transactions that commit using { w: 1 } write concern.
+
+To prevent rollbacks of data that have been acknowledged to the client, run all voting members with journaling enabled and use { w: "majority" } write concern to guarantee that the write operations propagate to a majority of the replica set nodes before returning with acknowledgement to the issuing client.
+
+Starting in MongoDB 5.0, { w: "majority" } is the default write concern for most MongoDB deployments. See Implicit Default Write Concern.
+
+With writeConcernMajorityJournalDefault set to false, MongoDB does not wait for w: "majority" writes to be written to the on-disk journal before acknowledging the writes. As such, "majority" write operations could possibly roll back in the event of a transient loss (e.g. crash and restart) of a majority of nodes in a given replica set.
+
+
+Optimized Index Builds 
+MongoDB index builds against a populated collection require an exclusive read-write lock against the collection. Operations that require a read or write lock on the collection must wait until the mongod releases the lock. MongoDB uses an optimized build process that only holds the exclusive lock at the beginning and end of the index build. The rest of the build process yields to interleaving read and write operations.
+
+Starting in MongoDB 4.2, the rollback time limit is calculated between the first operation after the common point and the last point in the oplog for the member to roll back.
+
+rs.status()
+Lets read and understand the output of the rs.status() command 
+
+db.adminCommand( { replSetGetStatus : 1 } )
+
+{
+   "set" : "replset",
+   "date" : ISODate("2020-03-05T05:24:45.567Z"),
+   "myState" : 1,
+   "term" : NumberLong(3),
+   "syncSourceHost" : "",
+   "syncSourceId" : -1,
+   "heartbeatIntervalMillis" : NumberLong(2000),
+   "majorityVoteCount" : 2,
+   "writeMajorityCount" : 2,
+   "votingMembersCount" : 3,            // Available starting in v4.4
+   "writableVotingMembersCount" : 3,    // Available starting in v4.4
+   "optimes" : {
+      "lastCommittedOpTime" : {
+         "ts" : Timestamp(1583385878, 1),
+         "t" : NumberLong(3)
+      },
+      "lastCommittedWallTime" : ISODate("2020-03-05T05:24:38.122Z"),
+      "readConcernMajorityOpTime" : {
+         "ts" : Timestamp(1583385878, 1),
+         "t" : NumberLong(3)
+      },
+      "readConcernMajorityWallTime" : ISODate("2020-03-05T05:24:38.122Z"),
+      "appliedOpTime" : {
+         "ts" : Timestamp(1583385878, 1),
+         "t" : NumberLong(3)
+      },
+      "durableOpTime" : {
+         "ts" : Timestamp(1583385878, 1),
+         "t" : NumberLong(3)
+      },
+      "lastAppliedWallTime" : ISODate("2020-03-05T05:24:38.122Z"),
+      "lastDurableWallTime" : ISODate("2020-03-05T05:24:38.122Z")
+   },
+   "lastStableRecoveryTimestamp" : Timestamp(1583385868, 2),
+   "electionCandidateMetrics" : {
+      "lastElectionReason" : "stepUpRequestSkipDryRun",
+      "lastElectionDate" : ISODate("2020-03-05T05:24:28.061Z"),
+      "electionTerm" : NumberLong(3),
+      "lastCommittedOpTimeAtElection" : {
+         "ts" : Timestamp(1583385864, 1),
+         "t" : NumberLong(2)
+      },
+      "lastSeenOpTimeAtElection" : {
+         "ts" : Timestamp(1583385864, 1),
+         "t" : NumberLong(2)
+      },
+      "numVotesNeeded" : 2,
+      "priorityAtElection" : 1,
+      "electionTimeoutMillis" : NumberLong(10000),
+      "priorPrimaryMemberId" : 1,
+      "numCatchUpOps" : NumberLong(0),
+      "newTermStartDate" : ISODate("2020-03-05T05:24:28.118Z"),
+      "wMajorityWriteAvailabilityDate" : ISODate("2020-03-05T05:24:28.228Z")
+   },
+   "electionParticipantMetrics" : {
+      "votedForCandidate" : true,
+      "electionTerm" : NumberLong(2),
+      "lastVoteDate" : ISODate("2020-03-05T05:22:33.306Z"),
+      "electionCandidateMemberId" : 1,
+      "voteReason" : "",
+      "lastAppliedOpTimeAtElection" : {
+         "ts" : Timestamp(1583385748, 1),
+         "t" : NumberLong(1)
+      },
+      "maxAppliedOpTimeInSet" : {
+         "ts" : Timestamp(1583385748, 1),
+         "t" : NumberLong(1)
+      },
+      "priorityAtElection" : 1
+   },
+   "members" : [
+      {
+         "_id" : 0,
+         "name" : "m1.example.net:27017",
+         "health" : 1,
+         "state" : 1,
+         "stateStr" : "PRIMARY",
+         "uptime" : 269,
+         "optime" : {
+            "ts" : Timestamp(1583385878, 1),
+            "t" : NumberLong(3)
+         },
+         "optimeDate" : ISODate("2020-03-05T05:24:38Z"),
+         "lastAppliedWallTime": ISODate("2020-03-05T05:24:38Z"),
+         "lastDurableWallTime": ISODate("2020-03-05T05:24:38Z"),
+         "syncSourceHost" : "",
+         "syncSourceId" : -1,
+         "infoMessage" : "",
+         "electionTime" : Timestamp(1583385868, 1),
+         "electionDate" : ISODate("2020-03-05T05:24:28Z"),
+         "configVersion" : 1,
+         "configTerm" : 0,
+         "self" : true,
+         "lastHeartbeatMessage" : ""
+      },
+      {
+         "_id" : 1,
+         "name" : "m2.example.net:27017",
+         "health" : 1,
+         "state" : 2,
+         "stateStr" : "SECONDARY",
+         "uptime" : 266,
+         "optime" : {
+            "ts" : Timestamp(1583385878, 1),
+            "t" : NumberLong(3)
+         },
+         "optimeDurable" : {
+            "ts" : Timestamp(1583385878, 1),
+            "t" : NumberLong(3)
+         },
+         "optimeDate" : ISODate("2020-03-05T05:24:38Z"),
+         "optimeDurableDate" : ISODate("2020-03-05T05:24:38Z"),
+         "lastAppliedWallTime": ISODate("2020-03-05T05:24:38Z"),
+         "lastDurableWallTime": ISODate("2020-03-05T05:24:38Z"),
+         "lastHeartbeat" : ISODate("2020-03-05T05:24:44.114Z"),
+         "lastHeartbeatRecv" : ISODate("2020-03-05T05:24:43.999Z"),
+         "pingMs" : NumberLong(0),
+         "lastHeartbeatMessage" : "",
+         "syncSourceHost" : "m3.example.net:27017",
+         "syncSourceId" : 2,
+         "infoMessage" : "",
+         "configVersion" : 1
+      },
+      {
+         "_id" : 2,
+         "name" : "m3.example.net:27017",
+         "health" : 1,
+         "state" : 2,
+         "stateStr" : "SECONDARY",
+         "uptime" : 266,
+         "optime" : {
+            "ts" : Timestamp(1583385878, 1),
+            "t" : NumberLong(3)
+         },
+         "optimeDurable" : {
+            "ts" : Timestamp(1583385878, 1),
+            "t" : NumberLong(3)
+         },
+         "optimeDate" : ISODate("2020-03-05T05:24:38Z"),
+         "optimeDurableDate" : ISODate("2020-03-05T05:24:38Z"),
+         "lastAppliedWallTime": ISODate("2020-03-05T05:24:38Z"),
+         "lastDurableWallTime": ISODate("2020-03-05T05:24:38Z"),
+         "lastHeartbeat" : ISODate("2020-03-05T05:24:44.114Z"),
+         "lastHeartbeatRecv" : ISODate("2020-03-05T05:24:43.998Z"),
+         "pingMs" : NumberLong(0),
+         "lastHeartbeatMessage" : "",
+         "syncSourceHost" : "m1.example.net:27017",
+         "syncSourceId" : 0,
+         "infoMessage" : "",
+         "configVersion" : 1
+      }
+   ],
+   "ok" : 1,
+   "$clusterTime" : {
+      "clusterTime" : Timestamp(1583385878, 1),
+      "signature" : {
+         "hash" : BinData(0,"9C2qcGVkipEGJW3iF90qxb/gIwc="),
+         "keyId" : NumberLong("6800589497806356482")
+      }
+   },
+   "operationTime" : Timestamp(1583385878, 1)
+}
+
+
+The Oplog 
+Replica Set Oplog 
+The oplog (operations log) is a special capped collection that keeps a rolling record of all operations that modify the data stored in your databases.
+
+All replica set members contain a copy of the oplog, in the local.oplog.rs collection, which allows them to maintain the current state of the database.
+
+Each operation in the oplog is idempotent. That is, oplog operations produce the same results whether applied once or multiple times to the target dataset.
+
+The oplog must translate multi-updates into individual operations in order to maintain idempotency. This can use a great deal of oplog space without a corresponding increase in data size or disk use.
+
+
+What is the minimum oplog retention period ?
+You can specify the minimum number of hours to preserve an oplog entry.
+The oplog has reached the maximum configured size, and
+The oplog entry is older than the configured number of hours based on the host system clock.
+
+By default MongoDB does not set a minimum oplog retention period and automatically truncates the oplog starting with the oldest entries to maintain the configured maximum oplog size.
+
+Add the storage.oplogMinRetentionHours setting to the mongod configuration file.
+
+replSetResizeOplog to change the size of the oplog and minimum retention time 
+
+Read Preference 
+Which node (or nodes) could be queried for every possible read concern (depending on the state of your nodes, as well)
+When your read preference allows you to read stale data
+
+Read Preference 
+Which node (or nodes) could be queried for every possible read concern (depending on the state of your nodes, as well)
+When your read preference allows you to read stale data
+
+By default, an application directs its read operations to the primary member in a replica set (i.e. read preference mode "primary"). But, clients can specify a read preference to send read operations to secondaries.
+
+Replica set members can lag behind the primary due to network congestion, low disk throughput, long-running operations, etc. The read preference maxStalenessSeconds option lets you specify a maximum replication lag, or "staleness", for reads from secondaries. When a secondary's estimated staleness exceeds maxStalenessSeconds, the client stops using it for read operations.
+
+primary -> Will only read from the primary and will fail if the primary is unavailable 
+primaryPreferred
+secondary 
+secondaryPreferred
+nearest -> The lowest latency threshold (localThresholdMS)
+
+All read preference modes except primary may return stale data because secondaries replicate operations from the primary in an asynchronous process. [1] Ensure that your application can tolerate stale data if you choose to use a non-primary mode.
+
+Sharding 
+- Understand horizontal scaling and how sharding provides this capability in MongoDB
+- Know how to construct a good shard key, and what can go wrong with selecting a shard key
+- Understand the role of the load balancer
+- Know the role of the config servers and how they work.
+
+Sharding is a method for distributing data across multiple machines. MongoDB uses sharding to support deployments with very large data sets and high throughput operations.
+
+Shard -> Each shard is going to contain a subset of the sharded data. Each shard can be deployed as a replica set for dedundancy 
+
+mongos -> mongos is the shard query router and provides an interface between client applications and the sharded cluster 
+
+config servers -> Config servers will store the metadata and configuration settings for the cluster 
+
+Shards -> A shard is going to have a portion of the data of the sharded data. 
+
+Shards must be deployed as a replica set for dedundancy and high availability 
+
+MongoDB does not guarantee that any two contiguous chunks reside on a single shard.
+
+Connect to the mongos to perform cluster level operations, including read or write operations.
+
+The primary shard -> Each database in a sharded cluster has a primary shard that holds all the un-sharded collections for that database. Each database has its own primary shard. The primary shard has no relation to the primary in a replica set.
+
+The mongos selects the primary shard when creating a new database by picking the shard in the cluster that has the least amount of data.
+
+Shard status -> sh.status() method to see an overview of the cluster. The report will include which shard is the primary for the database and the chunk distribution across shards.
+
+sh.status() -> When run on a mongos instance, prints a formatted report of the sharding configuration and the information regarding existing chunks in a sharded cluster. The default behavior suppresses the detailed chunk information if the total number of chunks is greater than or equal to 20.
+
+--- Sharding Status ---
+  sharding version: {
+   "_id" : <num>,
+   "minCompatibleVersion" : <num>,
+   "currentVersion" : <num>,
+   "clusterId" : <ObjectId>
+}
+
+shards:
+ { "_id" : <shard name1>, "host" : <string>, "tags" : [ <string> ... ], "state" : <num> }
+ { "_id" : <shard name2>, "host" : <string>, "tags" : [ <string> ... ], "state" : <num> }
+ ...
+
+active mongoses:
+{  "_id" : "<hostname:port>",  "advisoryHostFQDNs" : [ "<name>" ],  "mongoVersion" : <string>,  "ping" : <ISODate>,  "up" : <long>,  "waiting" : <boolean> }
+
+balancer:
+      Currently enabled:  yes
+      Currently running:  yes
+      Collections with active migrations:
+              config.system.sessions started at Fri May 15 2020 17:38:12 GMT-0400 (EDT)
+      Failed balancer rounds in last 5 attempts:  0
+      Migration Results for the last 24 hours:
+             416 : Success
+             1 : Failed with error 'aborted', from shardA to shardB
+
+databases:
+ { "_id" : <dbname1>, "primary" : <string>, "partitioned" : <boolean>, "version": <document> }
+ { "_id" : <dbname2>, "primary" : <string>, "partitioned" : <boolean>, "version": <document> }
+ .
+ 
+ ..
+
+
+<dbname>.<collection>
+   shard key: { <shard key> : <1 or hashed> }
+   unique: <boolean>
+   balancing: <boolean>
+   chunks:
+      <shard name1> <number of chunks>
+      <shard name2> <number of chunks>
+      ...
+   { <shard key>: <min range1> } -->> { <shard key> : <max range1> } on : <shard name> <last modified timestamp>
+   { <shard key>: <min range2> } -->> { <shard key> : <max range2> } on : <shard name> <last modified timestamp>
+   ...
+   tag: <tag1>  { <shard key> : <min range1> } -->> { <shard key> : <max range1> }
+   ...
+
+
+Use Internal/Membership Authentication to enforce intra-cluster security and prevent unauthorized cluster components from accessing the cluster. You must start each mongod in the cluster with the appropriate security settings in order to enforce internal authentication
+
+
+mongos -> mongos is the query router for sharded clusters and will route data appropriately to each correlating shard 
+
+Mongos Routing and Results Process 
+A mongos instance routes a query to a cluster by:
+
+Determining the list of shards that must receive the query.
+Establishing a cursor on all targeted shards.
+
+The mongos then merges the data from each of the targeted shards and returns the result document. Certain query modifiers, such as sorting, are performed on each shard before mongos retrieves the results.
+
+Changed in version 3.6: For aggregation operations that run on multiple shards, if the operations do not require running on the database's primary shard, these operations may route the results back to the mongos where the results are then merged.
+
+How mongos handles query modifiers 
+If the query limits the size of the result set using the limit() cursor method, the mongos instance passes that limit to the shards and then re-applies the limit to the result before returning the result to the client.
+
+If the query specifies a number of records to skip using the skip() cursor method, the mongos cannot pass the skip to the shards, but rather retrieves unskipped results from the shards and skips the appropriate number of documents when assembling the complete result.
+
+gicons/link.png
+If the result of the query is not sorted, the mongos instance opens a result cursor that "round robins" results from all cursors on the shards.
+
+
+Read Preference and shards 
+-> read preferences is applied 
+
+Hedged Reads -> Routes operations to two replia set members per queried shard and return results from the first respondant per shard. 
+
+{
+   "isWritablePrimary" : true,
+   "msg" : "isdbgrid",
+   "maxBsonObjectSize" : 16777216,
+   "ok" : 1,
+   ...
+}
+
+isdbgrid tells you that the db is a mongos instance 
+
+
+Target operations vs Broadcast Operations 
+Generally, the fastest queries in a sharded environment are those that mongos route to a single shard, using the shard key and the cluster meta data from the config server. These targeted operations use the shard key value to locate the shard or subset of shards that satisfy the query document.
+
+
+If a query includes the shard key it can be routed to a single shard and this is known as a targeted operation 
+
+vs Broadcast operations /scatter|gather operations 
+
+Broadcast Operations 
+mongos instances broadcast queries to all shards for the collection unless the mongos can determine which shard or subset of shards stores this data.
+
+Multi-update operations are always broadcast operations 
+
+The updateMany() and deleteMany() methods are broadcast operations, unless the query document specifies the shard key in full.
+
+Targeted Operations 
+if the query includes the shard key or a prefix of it then it will become a targeted operation 
+
+{ a: 1, b: 1, c: 1 }
+
+{ a: 1 }
+{ a: 1, b: 1 }
+
+All insertOne() operations target to one shard. Each document in the insertMany() array targets to a single shard, but there is no guarantee all documents in the array insert into a single shard.
+
+All updateOne(), replaceOne() and deleteOne() operations must include the shard key or _id in the query document. MongoDB returns an error if these methods are used without the shard key or _id.
+
+Index use with mongos 
+If the query does not include the shard key, the mongos must send the query to all shards as a "scatter/gather" operation. Each shard will, in turn, use either the shard key index or another more efficient index to fulfill the query.
+
+Shard Config Servers 
+-> The config servers store the metadata for the shards 
+The metadata will include the list of chunks on every shard and the ranges that define the chunks 
+
+The config database contains the collections that contain the sharded cluster metadata. MongoDB writes data to the config database when the metadata changes, such as after a chunk migration or a chunk split.
+
+When writing to the config servers, MongoDB uses a write concern of "majority".
+
+Reads from Config Servers 
+MongoDB reads from the admin database for authentication and authorization data and other internal uses.
+
+MongoDB reads from the config database when a mongos starts or after a change in the metadata, such as after a chunk migration. Shards also read chunk metadata from the config servers.
+
+Config Server Availability 
+If the config server replica set loses its primary and cannot elect a primary, the cluster's metadata becomes read only
+You can still read and write data from the shards, but no chunk migration or chunk splits will occur until the replica set can elect a primary.
+
+In a sharded cluster, mongod and mongos instances monitor the replica sets in the sharded cluster (e.g. shard replica sets, config server replica set).
+
+
+If all config servers become unavailable, the cluster can become inoperable. To ensure that the config servers remain available and intact, backups of config servers are critical. The data on the config server is small compared to the data stored in a cluster, and the config server has a relatively low activity load.
+
+sharded cluster metadata 
+to access the config database, you can run use config 
+
+changelog
+chunks
+collections
+databases
+lockpings
+locks
+mongos
+settings
+shards
+version
+
+
+Config servers deep dive 
+config.chunks -> will store a document for each chunk in the cluster.
+{
+   "_id" : "mydb.foo-a_\"cat\"",
+   "lastmod" : Timestamp(2, 1),
+   "uuid": "c025d039-e626-435e-b2d2-c1d436038041",
+   "min" : {
+         "animal" : "cat"
+   },
+   "max" : {
+         "animal" : "dog"
+   },
+   "shard" : "shard0004",
+   "history" : [ { "validAfter" : Timestamp(1569368571, 27), "shard" : "shard0004" } ]
+}
+
+The collections collection stores a document for each sharded collection in the cluster. Given a collection named pets in the records database, a document in the collections collection would resemble the following:
+
+
+{
+   "_id" : "records.pets",
+   "lastmod" : ISODate("2021-07-21T15:48:15.193Z"),
+   "timestamp": Timestamp(1626882495, 1),
+   "key" : {
+         "a" : 1
+   },
+   "unique" : false,
+   "lastmodEpoch" : ObjectId("5078407bd58b175c5c225fdc"),
+   "uuid" :  UUID("f8669e52-5c1b-4ea2-bbdc-a00189b341da")
+}
+
+{
+   "_id" : "example.com:27017",
+   "advisoryHostFQDNs" : [
+      "example.com"
+   ],
+   "mongoVersion" : "4.2.0",
+   "ping" : ISODate("2019-09-25T19:26:52.360Z"),
+   "up" : NumberLong(50),
+   "waiting" : true
+}
+
+Deploy Config servers as a 3 member replica set 
+
+Create the Config Server Replica Set
+
+Start each member of the config server replica set.
+When starting each mongod, specify the mongod settings either via a configuration file or the command line.
+
+sharding:
+  clusterRole: configsvr
+replication:
+  replSetName: <replica set name>
+net:
+  bindIp: localhost,<hostname(s)|ip address(es)>
+
+If using the command line options, start the mongod with the --configsvr, --replSet, --bind_ip, 
+
+mongod --config <path-to-config-file>
+
+Connect to one of the config servers.
+mongosh --host <hostname> --port <port>
+
+Initiate the replicaset with rs.initiate()
+
+rs.initiate(
+  {
+    _id: "<replSetName>",
+    configsvr: true,
+    members: [
+      { _id : 0, host : "cfg1.example.net:27019" },
+      { _id : 1, host : "cfg2.example.net:27019" },
+      { _id : 2, host : "cfg3.example.net:27019" }
+    ]
+  }
+)
+
+
+Now we will create the shard replica sets 
+Start each member of the shard replica set.
+
+sharding:
+    clusterRole: shardsvr
+replication:
+    replSetName: <replSetName>
+net:
+    bindIp: localhost,<ip address>
+
+The _id field set to the replica set name specified in either the replication.replSetName or the --replSet option.
+The members array with a document per each member of the replica set.
+
+sharding:
+    clusterRole: shardsvr
+replication:
+    replSetName: <replSetName>
+net:
+    bindIp: localhost,<ip address>
+
+mongod --shardsvr --replSet <replSetname>  --dbpath <path> --bind_ip localhost,<hostname(s)|ip address(es)>
+
+mongod --config <path-to-config-file>
+
+now we need to connect to on the shard replica sets 
+mongosh --host <hostname> --port <port>
+
+The _id field set to the replica set name specified in either the replication.replSetName or the --replSet option.
+
+rs.initiate(
+  {
+    _id : <replicaSetName>,
+    members: [
+      { _id : 0, host : "s1-mongo1.example.net:27018" },
+      { _id : 1, host : "s1-mongo2.example.net:27018" },
+      { _id : 2, host : "s1-mongo3.example.net:27018" }
+    ]
+  }
+)
+
+Start a mongos for the sharded cluster 
+sharding:
+  configDB: <configReplSetName>/cfg1.example.net:27019,cfg2.example.net:27019
+net:
+  bindIp: localhost,<hostname(s)|ip address(es)>
+
+mongos --config <path-to-config>
+
+OR 
+
+mongos --configdb <configReplSetName>/cfg1.example.net:27019,cfg2.example.net:27019,cfg3.example.net:27019 --bind_ip localhost,<hostname(s)|ip address(es)>
+
+
+
+connect mongosh to mongos 
+mongosh --host <hostname> --port <port>
+
+Add shards to the cluster 
+sh.addShard( "<replSetName>/s1-mongo1.example.net:27018,s1-mongo2.example.net:27018,s1-mongo3.example.net:27018")
+
+Before you can shard a collection, you must enable sharding for the collection's database. Enabling sharding for a database does not redistribute data but make it possible to shard the collections in that database.
+
+NOW WE HAVE TO ENABLE SHARDING:
+sh.enableSharding("<database>")
+
+Now let's shard a collection 
+To shard a collection, connect mongosh to the mongos and use the sh.shardCollection() 
+
+If the collection already contains data, you must create an index that supports the shard key before sharding the collection. If the collection is empty, MongoDB creates the index as part of sh.shardCollection().
+
+sh.shardCollection("<database>.<collection>", { <shard key field> : "hashed" } )
+
+sh.shardCollection("<database>.<collection>", { <shard key field> : 1, ... } )
+
+Ranged Sharding :
+Range-based sharding involves dividing data into contiguous ranges determined by the shard key values. In this model, documents with "close" shard key values are likely to be in the same chunk or shard. This all
+
+
+Now lets shard a collection 
+sh.shardCollection() -> 
+sh.shardCollection( "database.collection", { <shard key> } )
+
+Sharding a populated collection 
+The sharding operation creates the initial chunk(s) to cover the entire range of the shard key values. The number of chunks created depends on the configured chunk size.
+
+After the initial chunk creation, the balancer migrates these initial chunks across the shards as appropriate as well as manages the chunk distribution going forward.
+
+
+Sharding an empty collection 
+The sharding operation creates a single empty chunk to cover the entire range of the shard key values.
+After the initial chunk creation, the balancer migrates the initial chunk across the shards as appropriate as well as manages the chunk distribution going forward.
+
+Zones and zone ranges 
+n sharded clusters, you can create zones of sharded data based on the shard key. 
+balanced cluster, MongoDB migrates chunks covered by a zone only to those shards associated with the zone.
+
+Here are some common deployment patterns where zones can be applied:
+Isolate a specific subset of data on a specific set of shards.
+Ensure that the most relevant data reside on shards that are geographically closest to the application servers.
+Route data to shards based on the hardware / performance of the shard hardware.
+
+Zoning and behavior and operations 
+Ranges -> Each zone covers one or more ranges of shard key values for a collection.
+
+ {"x": 1}. 
+{ "x" : 5 } --> { "x" : 10 } // Zone A
+{ "x" : 10} --> { "x" : 20 } // Zone B
+
+
+Hashed Shard keys and Zone Ranges 
+For collections whose shard key includes a hashed field, zone ranges and data distribution on that field are on hashed values. The zone contains documents whose hashed shard key value falls into the defined range. A zone range on a hashed field does not have the same predictable document routing behavior as a zone range on an unhashed field.
+
+{ "x": NumberLong("4470791281878691347") } --> { "x": NumberLong("7766103514953448109") } // Zone A
+
+Zones initial chunk distribution 
+The balancer attempts to evenly distribute a sharded collection's chunks across all shards in the cluster.
+
+For each chunk marked for migration, the balancer checks each possible destination shard for any configured zones. If the chunk range falls into a zone,
+
+Zoning Shard key 
+You must use fields contains in the shard key when defining a new range for a zone to cover .
+. If using a compound shard key, the range must include the prefix of the shard key.
+
+{ a : 1, b : 1, c : 1 }
+
+The sharding operation creates empty chunks for the defined zone ranges as well as any additional chunks to cover the entire range of the shard key values and performs an initial chunk distribution based on the zone ranges. This initial creation and distribution of chunks allows for faster setup of zoned sharding.
+After the initial distribution, the balancer manages the chunk distribution going forward.
+
+Hashed Sharding Shard Key 
+The field you choose as your hashed shard key should have a good cardinality, or large number of different values. Hashed keys are ideal for shard keys with fields that change monotonically like ObjectId values or timestamps.
+
+A good example of this is the default _id field, assuming it only contains ObjectId values.
+
+Hashed vs Ranged Sharding 
+Given a collection using a monotonically increasing value X as the shard key, using ranged sharding results in a distribution of incoming inserts similar to the following:
+
+sh.shardCollection( "database.collection", { <field> : "hashed" } )
+
+sh.shardCollection(
+  "database.collection",
+  { "fieldA" : 1, "fieldB" : 1, "fieldC" : "hashed" }
+)
+
+Sharding Empty Collection on Compound Hashed Shard Key with Non-Hashed Prefix
+
+Resharding a Collection 
+Before you reshard your collection, ensure that you meet the following requirements:
+
+Your application can tolerate a period of two seconds where the collection that is being resharded blocks writes.
+
+ou have rewritten your application code to update your queries to use both the current shard key and the new shard key.
+
+The following queries return an error if the query filter does not include both the current shard key or a unique field (like _id):
+
+deleteOne()
+findAndModify()
+findOneAndDelete()
+findOneAndReplace()
+findOneAndUpdate()
+replaceOne()
+updateOne()
+For optimal performance, we
+
+
+For optimal performance, we recommend that you also rewrite other queries to include the new shard key.
+
+Once the resharding operation completes, you can remove the old shard key from the queries.
+
+ db.adminCommand(
+    {
+      currentOp: true,
+      $or: [
+        { op: "command", "command.createIndexes": { $exists: true }  },
+        { op: "none", "msg" : /^Index Build/ }
+      ]
+    }
+)
+
+{
+   inprog: [],
+   ok: 1,
+   '$clusterTime': { ... },
+   operationTime: <timestamp>
+}
+
+
+Only one collection can be resharded at a time.
+
+Resharding Process :
+Start the resharding operation 
+
+While connected to mongos issue a reshardCollection command that specifies the collection to be resharded and the new shard key 
+db.adminCommand({
+  reshardCollection: "<database>.<collection>",
+  key: <shardkey>
+})
+
+MongoDB sets the max number of seconds to block writes to two seconds and begins the resharding operation.
+
+db.getSiblingDB("admin").aggregate([
+  { $currentOp: { allUsers: true, localOps: false } },
+  {
+    $match: {
+      type: "op",
+      "originatingCommand.reshardCollection": "<database>.<collection>"
+    }
+  }
+])
+
+Throughout the resharding process, the estimated time to complete the resharding operation (remainingOperationTimeEstimatedSecs) decreases. When the estimated time is below two seconds, MongoDB blocks writes and completes the resharding operation
+
+
+The resharding operation fails if _id values are not globally unique to avoid corrupting collection data. Duplicate _id values can also prevent successful chunk migration. If you have documents with duplicate _id values, copy the data from each into a new document, and then delete the duplicate documents.
+
+Refining a shard key 
+Refining a collection's shard key allows for a more fine-grained data distribution and can address situations where the existing key has led to jumbo chunks due to insufficient cardinality.
+
+refineCollectionShardKey 
+
+db.adminCommand( {
+   refineCollectionShardKey: "test.orders",
+   key: { customer_id: 1, order_id: 1 }
+} )
+
+ adds a suffix field or fields to the existing key to create the new shard key.
+
+Why would you even want to change a shard key?
+
+Jumbo Chunks 
+-> When a chunk gets very large and becomes unsplittable such as when the shard key frequency is too large 
+
+Uneven Load Distribution 
+-> If your cluster is experiencing uneven load distribution, check if your shard key increases monotonically. A shard key that is a monotonically increasing field, leads to an uneven read and write distribution.
+
+Decreased Query Performance Over Time 
+-> This decreased query performance over time will mean that there are more broadcast operation or scatter-gather queries.
+-> To evaluate if your cluster is performing scatter-gather queries, check if your most common queries include the shard key.
+-> If you include the shard key in your queries, check if your shard key is hashed. With Hashed Sharding, documents are not stored in ascending or descending order of the shard key field value. Performing range based queries on the shard key value on data that is not stored in ascending or descending order results in less performant scatter-gather queries. If range based queries on your shard key are a common access pattern, consider resharding your collection.
+
+
+The Shard Key 
+Mongodb 4.2 and onwards the shard key can be changed unless the shard key is the immutable _id field 
+What makes a good shard key
+What makes a bad shard key
+How the shard key implements ranged-based sharding in MongoDB
+
+Shard Keys deep dive 
+-> The shard key is either a single indexed field or multiple fields covered by a compound index that determines the distribution of the collection's documents among the cluster's shards.
+-> MongoDB divides the span of shard key values (or hashed shard key values) into non-overlapping ranges of shard key values (or hashed shard key values). Each range is associated with a chunk, and MongoDB attempts to distribute chunks evenly among the shards in the cluster.
+-> All sharded collections must have an index that supports the shard key. The index can be an index on the shard key or a compound index where the shard key is a prefix of the index.
+
+If the collection is empty, sh.shardCollection() creates the index on the shard key if such an index does not already exists.
+If the collection is not empty, you must create the index first before using sh.shardCollection().
+
+Unique Indexes with Shard Keys 
+Missing Shard Key Fields 
+-> Missing shard key fields fall within the same chunk range as shard keys with null values. For example, if the shard key is on the fields { x: 1, y: 1 }, then:
+
+Document Missing Shard Key
+Falls into Same Range As
+{ x: "hello" }
+{ x: "hello", y: null }
+{ y: "goodbye" }
+{ x: null, y: "goodbye" }
+{ z: "oops" }
+{ x: null, y: null }
+
+Read/Write Operations and Missing Shard Key Fields
+db.shardedcollection.find( { $or: [ { x: { $exists: false } }, { y: { $exists: false } } ] } )
+
+
+Chunks and the balancer 
+- How to define a chunk by shard key range 
+- How to determine whether a chunk range includes a specific document 
+- When chunk splits occur automatically 
+- How the balancer uses chunks to keep the cluster balanced 
+
+What is a chunk?
+A chunk is essentially the unit of measure that each individual document will be assigned to and is a collection of the documents. These chunks have a lower and upper range and are sequential. When they become large, they can be split by the balancer as well as moved to different shards.
+
+ contiguous range of shard key values within a particular shard. Chunk ranges are inclusive of the lower boundary and exclusive of the upper boundary. MongoDB splits chunks when they grow beyond the configured chunk size, which by default is 64 megabytes. MongoDB migrates chunks when a shard contains too many chunks of a collection relative to other shards. See Data Partitioning with Chunks and Sharded Cluster Balancer.
+
+ Data Partitioning Wih Chunks 
+ The smallest range a chunk can represent is a single unique shard key value. A chunk that only contains documents with a single shard key value cannot be split.
+
+ The sharding operation creates the initial chunk(s) to cover the entire range of the shard key values. The number of chunks created depends on the configured chunk size.
+
+ The chunk size is by default 64MB
+ this can be increased or decreased to fit your needs for your chunk size 
+
+ Small chunks lead to a more even distribution of data at the expense of more frequent migrations. This creates expense at the query routing (mongos) layer.
+
+ Large chunks lead to fewer migrations. This is more efficient both from the networking perspective and in terms of internal overhead at the query routing layer. But, these efficiencies come at the expense of a potentially uneven distribution of data.
+
+Limits to chunks 
+-> Changing the chunk size affects when chunks split there are some limitation to it's effects 
+->Automatic splitting only occurs during inserts or updates. If you lower the chunk size, it may take time for all chunks to split to the new size.
+-> Splits cannot be "undone". If you increase the chunk size, existing chunks must grow through inserts or updates until they reach the new size.
+
+Chunk Splits 
+Splitting is a process that keeps chunks from growing too large. When a chunk grows beyond a specified chunk size, or if the number of documents in the chunk exceeds Maximum Number of Documents Per Chunk to Migrate, MongoDB splits the chunk based on the shard key values the chunk represent. 
+
+Chunk Migrations 
+Manual. Only use manual migration in limited cases, such as to distribute data during bulk inserts. See Migrating Chunks Manually for more details.
+Automatic. The balancer process automatically migrates chunks when there is an uneven distribution of a sharded collection's chunks across the shards. See Migration Thresholds for more details.
+
+Balancing 
+The balancer is a background process that manages chunk migrations. If the difference in number of chunks between the largest and smallest shard exceed the migration thresholds, the balancer begins migrating chunks across the cluster to ensure an even distribution of data.
+
+The Cluster Balancer 
+To address uneven chunk distribution for a sharded collection, the balancer migrates chunks from shards with more chunks to shards with a fewer number of chunks. The balancer migrates the chunks until there is an even distribution of chunks for the collection across the shards. For details about chunk migration, see Chunk Migration Procedure.
+
+Restricting a shard to at most one migration at any given time; i.e. a shard cannot participate in multiple chunk migrations at the same time. To migrate multiple chunks from a shard, the balancer migrates the chunks one at a time.
+
+Adding and removing shards from the cluster 
+
+Adding a shard to a cluster 
+mongosh --host mongos0.example.net --port 27017
+sh.addShard( "rs1/mongodb0.example.net:27018" )
+
+Remove Shards from an existing sharded cluster 
+To remove a shard you must ensure the shard's data is migrated to the remaining shards in the cluster. This procedure describes how to safely migrate data and how to remove a shard.
+
+To successfully migrate data from a shard, the balancer process must be enabled. Check the balancer state using the sh.getBalancerState() helper in mongosh. For more information, see the section on balancer operations.
+
+db.adminCommand( { listShards: 1 } )
+db.adminCommand( { removeShard: "mongodb0" } )
+
+Migration thresholds
+To minimize the impact of balancing on the cluster, the balancer only begins balancing after the distribution of chunks for a sharded collection has reached certain thresholds
+
+Number of Chunks
+Migration Threshold
+Fewer than 20
+2
+20-79
+4
+80 and greater
+8
+
+
+asynchronous chunk migration cleanup
+To migrate multiple chunks from a shard, the balancer migrates the chunks one at a time. However, the balancer does not wait for the current migration's delete phase to complete before starting the next chunk migration. See Chunk Migration for the chunk migration process and the delete phase.
+
+Chunk Migration 
+MongoDB migrates chunks in a sharded cluster to distribute the chunks of a sharded collection evenly among shards. Migrations may be either:
+
+Manual. Only use manual migration in limited cases, such as to distribute data during bulk inserts. See Migrating Chunks Manually for more details.
+Automatic. The balancer process automatically migrates chunks when there is an uneven distribution of a sharded collection's chunks across t
+
+Manage Sharded Cluster Balancer 
+
+Checking the balancer state  sh.getBalancerState()
+-> getBalancerState() is going to check if the balancer is enabled 
+sh.isBalancerRunning()-> check if there is an active balancer state process 
+
+db.settings.updateOne(
+   { _id: "balancer" },
+   { $set: { activeWindow : { start : "<start-time>", stop : "<stop-time>" } } },
+   { upsert: true }
+)
+
+sh.disableBalancing("students.grades")
+
+sh.enableBalancing("students.grades")
+
+db.getSiblingDB("config").collections.findOne({_id : "students.grades"}).noBalance;
+
+f the _secondaryThrottle setting for the balancer is set to a write concern, each document move during chunk migration must receive the requested acknowledgement before proceeding with the next document.
+If the _secondaryThrottle setting for the balancer is set to true, each document move during chunk migration must receive acknowledgement from at least one secondary before the migration proceeds with the next document in the chunk. This is equivalent to a write concern of { w: 2 }.
+If the _secondaryThrottle setting is unset, the migration process does not wait for replication to a secondary and instead continues with the next document.
+
+Default behavior for WiredTiger starting in MongoDB 3.4.
+
+use config
+db.settings.updateOne(
+   { "_id" : "balancer" },
+   { $set : { "_secondaryThrottle" : { "w": "majority" }  } },
+   { upsert : true }
+)
+
+
+use config
+db.settings.updateOne(
+   { "_id" : "balancer" },
+   { $set : { "_waitForDelete" : true } },
+   { upsert : true }
+)
+
+Migrate Chunks in a sharded cluster 
+In most circumstances, you should let the automatic balancer migrate chunks between shards. However, you may want to migrate chunks manually in a few cases:
+
+db.adminCommand( { moveChunk : "myapp.users",
+                   find : {username : "smith"},
+                   to : "mongodb-shard3.example.net" } )
+
+
+Modify Chunk size in a sharded cluster 
+db.settings.insertOne( { _id:"chunksize", value: <sizeInMB> } )
+
+Automatic splitting only occurs on insert or update.
+If you lower the chunk size, it may take time for all chunks to split to the new size.
+
+Config servers and cluster Metadata 
+
+Queries in a sharded cluster 
+
+Broadcast Operations 
+Broadcast operations will occur unless the mongos can determine a subset of the shard to query 
+
+Explain Results with shards 
+->For sharded collections, explain includes the core query planner and server information for each accessed shard in the shards field:
+"queryPlanner" : {
+   "mongosPlannerVersion" : <int>,
+   "winningPlan" : {
+      "stage" : <STAGE1>,
+      "shards" : [
+         {
+            "shardName" : <string>,
+            "connectionString" : <string>,
+            "serverInfo" : {
+               "host" : <string>,
+               "port" : <int>,
+               "version" : <string>,
+               "gitVersion" : <string>
+            },
+            "plannerVersion" : <int>,
+            "namespace" : <string>,
+            "parsedQuery" : <document>,
+            "queryHash" : <hexadecimal string>,
+            "planCacheKey" : <hexadecimal string>,
+            "optimizedPipeline" : <boolean>, // Starting in MongoDB 4.2, only appears if true
+            "winningPlan" : {
+               "stage" : <STAGE2>,
+               "inputStage" : {
+                  "stage" : <STAGE3>
+                  ...,
+               }
+            },
+            "rejectedPlans" : [
+               <candidate plan 1>,
+               ...
+            ]
+         },
+         ...
+      ]
+   }
+}
+
+Aggregation Pipeline and Sharded Collections 
+If the pipeline starts with an exact $match on a shard key, and the pipeline does not contain $out or $lookup stages, the entire pipeline runs on the matching shard only.
+
+When aggregation operations run on multiple shards, the results are routed to the mongos to be merged, except in the following cases:
+
+If the pipeline includes the $out or $lookup stages, the merge runs on the primary shard.
+If the pipeline includes a sorting or grouping stage, and the allowDiskUse setting is enabled, the merge runs on a randomly-selected shard.
+
+Server Tools that will be asked in the developers exam 
+How to export and import data using server tools 
+How to monitor basic operations on the server using server tools
+
+
+mongoimport -> Allows you to import data into your mongod instance 
+The mongoimport tool imports content from an Extended JSON, CSV, or TSV export created by mongoexport, or potentially, another third-party export tool.
+
+You have to run it from the cmd 
+mongoimport --db=users --collection=contacts --file=contacts.json
+
+Replace Matching documents during import 
+mongoimport --mode upsert 
+By default mongoimport matches documents based on the _id field. Use --upsertFields to specify the fields to match against.
+
+{
+   "_id" : ObjectId("580100f4da893943d393e909"),
+   "name" : "Crystal Duncan",
+   "region" : "United States",
+   "email" : "crystal@example.com"
+}
+
+people.db 
+
+{
+   "_id" : ObjectId("580100f4da893943d393e909"),
+   "username" : "crystal",
+   "likes" : [ "running", "pandas", "software development" ]
+}
+
+mongoimport -c=people -d=example --mode=upsert --file=people-20160927.json
+
+{
+   "_id" : ObjectId("580100f4da893943d393e909"),
+   "username" : "crystal",
+   "likes" : [ "running", "pandas", "software development" ]
+}
+
+
+Merge Matching Documents during import 
+mongoimport --mode merge -> this is going to merge the fields from the new record with an existing document in the database. Obviously new documents will be inserted as usual 
+_id by default BUT you can use --upsertField 
+
+mongoimport -c=people -d=example --mode=merge --file=people-20160927.json
+
+Delete Matching Documents 
+mongoimport --delete will delete existing documents in the database that match a document in the import file 
+
+mongoimport -c=people -d=example --mode=delete --file=people-20160927.json
+
+mongoimport --db=users --collection=contacts --type=csv --headerline --file=/opt/backups/contacts.csv
+
+mongoimport --db=users --collection=contacts --type=csv --file=/example/data.csv --ignoreBlanks
+
+
+MongoExport 
+exports the contents of a collection to JSON or CSV
+
+Export in CSV format 
+In the following example, mongoexport exports data from the collection contacts collection in the users database in CSV format to the file /opt/backups/contacts.csv.
+
+mongoexport --db=users --collection=contacts --type=csv --fields=name,address --out=/opt/backups/contacts.csv
+
+example: 
+name, address
+Sophie Monroe, 123 Example Road
+Charles Yu, 345 Sample Street
+
+Use a File to Specify the Fields to Export in CSV Format
+For example, you can specify the name and address fields in a file fields.txt:
+
+mongoexport --db=users --collection=contacts --type=csv --fieldFile=fields.txt --out=/opt/backups/contacts.csv
+
+mongoexport --db=users --collection=contacts --type=csv --fields=name,address --noHeaderLine --out=/opt/backups/contacts.csv
+
+mongoexport --db=sales --collection=contacts --out=contacts.json
+
+mongostat
+The mongostat utility provides a quick overview of the status of a currently running mongod or mongos instance.
+
+
+mongostat will provide you with a quick overview of the status of a currently running mongod/mongos instance 
+-> mongostat is going to provide you with the stats of the currently running server
+
+Run mongostat from the system command line, not the mongo shell.
+
+Specify mongostat Collection Period and Frequency
+In the first example, mongostat will return data every second for 20 seconds. mongostat collects data from the mongod instance running on the localhost interface on port 27017. All of the following invocations produce identical behavior:
+
+mongostat --rowcount=20 1
+mongostat --rowcount=20
+mongostat -n=20 1
+mongostat -n=20
+
+returns data every second for 20 seconds 
+
+mongostat --rowcount=0 300
+mongostat -n=0 300
+mongostat 300
+
+Add fields to the mongostat output 
+mongostat -O='host,version,network.numRequests=network requests'
+
+insert query update delete getmore command dirty used flushes vsize   res qrw arw net_in net_out conn                time            host version network requests
+    *0    *0     *0     *0       0     2|0  0.0% 0.0%       0 2.51G 19.0M 0|0 0|0   158b   39.4k    2 Oct 11 12:14:45.878 localhost:37017  3.3.14               91
+    *0    *0     *0     *0       0     1|0  0.0% 0.0%       0 2.51G 19.0M 0|0 0|0   157b   39.3k    2 Oct 11 12:14:46.879 localhost:37017  3.3.14               95
+    *0    *0     *0     *0       0     1|0  0.0% 0.0%       0 2.51G 19.0M 0|0 0|0   157b   39.2k    2 Oct 11 12:14:47.884 localhost:37017  3.3.14               99
+
+
+MongoStat Video 
+The mongostat is going to give you the overview of the inserts, query, deletes that are going on during the sampling time 
+
+mongotop 
+mongotop provides a method to track the amount of time a MongoDB instance mongod spends reading and writing data.
+-> displays the amount of time a mongodb instance spends reading and writing data 
+
+2019-04-29T15:35:27.785-0400 connected to: 127.0.0.1
+             ns    total      read      write    <timestamp>
+<db.collection>    81802ms     0ms    81802ms
+...
+             ns    total      read      write    <timestamp>
+<db.collection>    0ms         0ms        0ms
+...
+
+2019-04-29T15:35:27.785-0400 connected to: 127.0.0.1
+
+
+                    ns    total    read    write    2019-04-29T15:35:57-04:00
+    admin.system.roles      0ms     0ms      0ms
+    admin.system.users      0ms     0ms      0ms
+  admin.system.version      0ms     0ms      0ms
+config.system.sessions      0ms     0ms      0ms
+     local.startup_log      0ms     0ms      0ms
+  local.system.replset      0ms     0ms      0ms
+
+

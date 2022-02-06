@@ -1,0 +1,19 @@
+BSON 
+That BSON is a binary JSON data format
+What we mean in describing BSON as lightweight, traversable, and efficient
+How BSON encodes a value using explicit type information, a binary representation of the value, and explicit byte length.
+
+
+CRUD Revisited 
+Understand all create, read, update, and delete (CRUD) operations in the MongoDB query language
+Are familiar with commonly used CRUD operators and how to use them
+Know which data types are supported by MongoDB
+
+-> Correctly use the insert, save, update, and findAndModify commands to create new documents
+-> Match insert commands with descriptions of what they do
+-> Know how to perform bulk inserts
+-> Understand the uniqueness constraint of _id fields and its implications for CRUD operations
+
+_id is a field required in every MongoDB document. The _id field must have a unique value for the collection it is used in. You can think of the _id field as the document's Primary Key. If you create a new document without an _id field, MongoDB automatically creates the field and assigns a unique BSON ObjectId. If the document contains an _id field, the _id value must be unique within the collection to avoid duplicate key error.
+
+db.collection.insert()
